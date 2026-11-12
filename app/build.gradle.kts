@@ -32,7 +32,9 @@ android {
     }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             signingConfig = signingConfigs.getByName(if (System.getenv("IMMUNOBLOCKERS_KEYSTORE") != null) "preview" else "debug")
         }
     }
