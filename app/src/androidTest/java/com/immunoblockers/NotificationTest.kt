@@ -21,8 +21,10 @@ class NotificationTest {
         app.repository.saveMedication(med)
         val row=app.repository.dao.occurrences().first {it.medicationId==id && it.date==LocalDate.now().toString()}
         try {
-            app.reminders.deliver()
             val manager=app.getSystemService(NotificationManager::class.java)
+            app.reminders.reconcileAndSchedule()
+            // Wait for AlarmManager -> BroadcastReceiver -> notification, with no Activity.
+            withTimeout(30000){while(manager.activeNotifications.none {it.tag==row.id})delay(100)}
             val notification=manager.activeNotifications.first {it.tag==row.id}.notification
             assertEquals(2,notification.actions.size)
             notification.actions[1].actionIntent.send()

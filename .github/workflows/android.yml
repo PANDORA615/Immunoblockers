@@ -76,6 +76,7 @@ jobs:
           script: |
             ./gradlew installDebug installDebugAndroidTest
             adb shell pm grant com.immunoblockers android.permission.POST_NOTIFICATIONS
+            adb shell appops set com.immunoblockers SCHEDULE_EXACT_ALARM allow
             ./gradlew connectedDebugAndroidTest || { cat app/build/outputs/androidTest-results/connected/debug/*.xml; adb logcat -d -s AndroidRuntime; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
