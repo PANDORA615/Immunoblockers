@@ -1,0 +1,23 @@
+name: Publish verified APK
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify signed artifact
+        run: |
+          echo '391d4b85fc60f1b7cb00acfa9463ab4121045ce56f3e2efb0ee001d8b5b01afe  distribution/Immunoblockers-0.1.0-universal.apk' | sha256sum --check
+      - name: Publish one universal APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v0.1.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload v0.1.0 distribution/Immunoblockers-0.1.0-universal.apk --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit v0.1.0 --repo "$GITHUB_REPOSITORY" --draft=false --latest --title 'Immunoblockers 0.1.0 — Android preview' --notes-file docs/RELEASE.md
+          else
+            gh release create v0.1.0 distribution/Immunoblockers-0.1.0-universal.apk --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Immunoblockers 0.1.0 — Android preview' --notes-file docs/RELEASE.md --latest
+          fi
