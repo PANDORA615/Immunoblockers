@@ -1,0 +1,163 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <string name="app_name">Immunoblockers</string>
+  <string name="today">Сегодня</string>
+  <string name="medications">Лекарства</string>
+  <string name="history">История</string>
+  <string name="settings">Настройки</string>
+  <string name="add_medication">Добавить лекарство</string>
+  <string name="edit_medication">Изменить лекарство</string>
+  <string name="save">Сохранить</string>
+  <string name="cancel">Отмена</string>
+  <string name="back">Назад</string>
+  <string name="close">Закрыть</string>
+  <string name="taken">Принято</string>
+  <string name="take">Принять</string>
+  <string name="skip">Пропустить</string>
+  <string name="skipped">Пропущено пользователем</string>
+  <string name="pending">Ожидает приёма</string>
+  <string name="unmarked">Нет отметки</string>
+  <string name="snoozed">Отложено до %1$s</string>
+  <string name="snooze">Отложить</string>
+  <string name="snooze_notification">Напомнить позже</string>
+  <string name="minutes">%1$d мин</string>
+  <string name="undo">Отменить</string>
+  <string name="mark_saved">Отметка сохранена</string>
+  <string name="snooze_saved">Напоминание перенесено</string>
+  <string name="correct">Исправить отметку</string>
+  <string name="reset_mark">Убрать отметку</string>
+  <string name="no_medications">Забота начинается с расписания</string>
+  <string name="no_medications_body">Добавьте лекарство и время приёма. Immunoblockers напомнит о нём — без регистрации и интернета.</string>
+  <string name="no_doses">Сегодня приёмов нет</string>
+  <string name="no_doses_body">Расписание на другие дни можно посмотреть в разделе «Лекарства».</string>
+  <string name="all_done">На сегодня всё отмечено</string>
+  <string name="all_done_body">История сохранена. Завтра здесь появится ваше расписание.</string>
+  <string name="day_progress">Ритм вашего дня</string>
+  <string name="progress_counts">Принято: %1$d · Пропущено: %2$d · Всего: %3$d</string>
+  <string name="next_dose">Ближайший приём · %1$s</string>
+  <string name="search">Поиск лекарства</string>
+  <string name="archive">Архив</string>
+  <string name="active">Активные</string>
+  <string name="paused">На паузе</string>
+  <string name="pause">Поставить на паузу</string>
+  <string name="resume">Возобновить</string>
+  <string name="archive_action">Архивировать</string>
+  <string name="restore">Вернуть из архива</string>
+  <string name="details">О лекарстве</string>
+  <string name="daily">Ежедневно</string>
+  <string name="course">Курс: %1$s — %2$s</string>
+  <string name="indefinite">без окончания</string>
+  <string name="note">Заметка</string>
+  <string name="name">Название лекарства</string>
+  <string name="dose">Разовая дозировка</string>
+  <string name="unit">Единица</string>
+  <string name="start_date">Дата начала</string>
+  <string name="end_date">Дата окончания</string>
+  <string name="no_end">Без даты окончания</string>
+  <string name="weekdays">Дни недели</string>
+  <string name="times">Время приёма</string>
+  <string name="add_time">Добавить время</string>
+  <string name="remove_time">Удалить время %1$s</string>
+  <string name="required_name">Введите название</string>
+  <string name="invalid_dose">Введите положительное число</string>
+  <string name="invalid_days">Выберите хотя бы один день</string>
+  <string name="invalid_times">Добавьте время; повторения недопустимы</string>
+  <string name="invalid_dates">Окончание должно быть не раньше начала</string>
+  <string name="unsaved_title">Сохранить изменения?</string>
+  <string name="unsaved_body">В форме есть несохранённые изменения.</string>
+  <string name="discard">Выйти без сохранения</string>
+  <string name="date">Дата</string>
+  <string name="all_dates">Все даты</string>
+  <string name="all_medications">Все лекарства</string>
+  <string name="all_states">Все состояния</string>
+  <string name="empty_history">Здесь появится история</string>
+  <string name="empty_history_body">Приёмы сохраняются по датам. «Нет отметки» означает отсутствие записи, а не подтверждённый пропуск.</string>
+  <string name="scheduled">По расписанию: %1$s</string>
+  <string name="marked">Отмечено: %1$s</string>
+  <string name="appearance">Внешний вид</string>
+  <string name="theme">Тема</string>
+  <string name="system">Как в системе</string>
+  <string name="light">Светлая</string>
+  <string name="dark">Тёмная</string>
+  <string name="palette">Палитра</string>
+  <string name="default_palette">Спокойный зелёный</string>
+  <string name="dynamic_palette">Цвета системы</string>
+  <string name="custom_palette">Свой цвет</string>
+  <string name="hex">HEX #RRGGBB</string>
+  <string name="invalid_hex">Введите цвет в формате #RRGGBB</string>
+  <string name="apply_color">Применить цвет</string>
+  <string name="hue">Оттенок</string>
+  <string name="color_sample">Образец цвета %1$s</string>
+  <string name="preview">Предпросмотр</string>
+  <string name="preview_body">Ваша палитра во всех деталях</string>
+  <string name="reduced_motion">Уменьшить движение</string>
+  <string name="reduced_motion_body">Короткие переходы без крупных перемещений</string>
+  <string name="notifications">Уведомления</string>
+  <string name="enable_reminders">Напоминания включены</string>
+  <string name="privacy_notifications">Скрывать данные лекарства</string>
+  <string name="privacy_notifications_body">Нейтральный текст уведомления и скрытие на экране блокировки</string>
+  <string name="permission_ok">Уведомления разрешены</string>
+  <string name="permission_missing">Уведомления недоступны. Включите их в системных настройках, чтобы получать напоминания.</string>
+  <string name="permission_explain_title">Разрешить напоминания?</string>
+  <string name="permission_explain_body">Разрешение на уведомления нужно для напоминаний о приёме при закрытом приложении. Список и история работают и без него.</string>
+  <string name="allow">Продолжить</string>
+  <string name="later">Позже</string>
+  <string name="open_settings">Открыть настройки</string>
+  <string name="exact_ok">Точные будильники доступны</string>
+  <string name="exact_missing">Напоминания приблизительные: Android не разрешил точные будильники.</string>
+  <string name="exact_settings">Настроить точность</string>
+  <string name="test_notification">Отправить тестовое уведомление</string>
+  <string name="test_notification_title">Тест Immunoblockers</string>
+  <string name="test_notification_body">Это проверка уведомлений. Записи в истории не создаются.</string>
+  <string name="reminder_channel">Приём лекарств</string>
+  <string name="reminder_channel_description">Локальные напоминания по вашему расписанию</string>
+  <string name="private_title">Время приёма</string>
+  <string name="private_body">Откройте Immunoblockers, чтобы посмотреть расписание.</string>
+  <string name="notification_dose">%1$s %2$s · по расписанию в %3$s</string>
+  <string name="unmarked_summary">Проверьте историю приёмов</string>
+  <string name="unmarked_count">За прошлые дни без отметки: %1$d</string>
+  <string name="privacy">Данные и конфиденциальность</string>
+  <string name="privacy_body">Данные хранятся только на этом устройстве. Сетевой доступ, аккаунты и облачные копии не используются. После удаления приложения данные будут потеряны. Immunoblockers хранит введённое расписание и не назначает дозировки.</string>
+  <string name="delivery_limits">При выключенном телефоне, принудительной остановке приложения или системных запретах доставка невозможна. Точность также зависит от настроек энергосбережения устройства.</string>
+  <string name="version">Версия 0.1.0 · Android 8.0+</string>
+  <string name="notification_test_sent">Тест отправлен; проверьте шторку уведомлений</string>
+  <string name="schedule">Расписание</string>
+  <string name="medication_history">История лекарства</string>
+  <string name="loading">Загрузка…</string>
+  <string name="save_error">Не удалось сохранить. Попробуйте ещё раз.</string>
+  <string name="archived">В архиве</string>
+  <string name="today_label">Сегодня, %1$s</string>
+  <string name="choose_state">Состояние</string>
+  <string name="details_dose">%1$s %2$s</string>
+  <string name="edit">Изменить</string>
+  <string name="archive_confirm">Архивировать лекарство?</string>
+  <string name="archive_explain">Будущие напоминания отменятся. История останется доступна.</string>
+  <string name="onboarding_caption">ВАШЕ РАСПИСАНИЕ · ВАШ СПОКОЙНЫЙ ДЕНЬ</string>
+  <string name="welcome_caption">Небольшое действие.
+Больше спокойствия.</string>
+  <string name="clear_date">Сбросить дату</string>
+  <string name="time_conflict">Это время уже добавлено</string>
+  <string name="daily_hint">В выбранные дни используются все указанные времена.</string>
+  <string name="permission_action">Настроить уведомления</string>
+  <string name="correction_title">Исправление записи</string>
+  <string name="empty_search">Ничего не найдено</string>
+  <string name="filter_medication">Фильтр по лекарству</string>
+  <string name="filter_state">Фильтр по состоянию</string>
+  <string-array name="units">
+    <item>таблетка</item>
+    <item>капсула</item>
+    <item>мл</item>
+    <item>капля</item>
+    <item>другая</item>
+  </string-array>
+  <string-array name="day_names">
+    <item>Пн</item>
+    <item>Вт</item>
+    <item>Ср</item>
+    <item>Чт</item>
+    <item>Пт</item>
+    <item>Сб</item>
+    <item>Вс</item>
+  </string-array>
+  <string name="completion_count">%1$d / %2$d</string>
+</resources>
