@@ -1,4 +1,5 @@
 @file:Suppress("RestrictedApi")
+@file:OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
 package com.immunoblockers.ui
 
 import android.annotation.SuppressLint
@@ -10,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import com.immunoblockers.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
@@ -73,7 +75,7 @@ fun AppTheme(settings: ThemeSettings, content: @Composable () -> Unit) {
     }
     val typography=remember(settings.boldText,settings.roundedFont) {
         val base=Typography()
-        val font=if(settings.roundedFont)FontFamily(Font(R.font.nunito,FontWeight.Normal),Font(R.font.nunito,FontWeight.Medium),Font(R.font.nunito,FontWeight.SemiBold),Font(R.font.nunito,FontWeight.Bold)) else FontFamily.Default
+        val font=if(settings.roundedFont)FontFamily(Font(R.font.nunito,FontWeight.Normal,variationSettings=FontVariation.Settings(FontVariation.weight(400))),Font(R.font.nunito,FontWeight.Medium,variationSettings=FontVariation.Settings(FontVariation.weight(500))),Font(R.font.nunito,FontWeight.SemiBold,variationSettings=FontVariation.Settings(FontVariation.weight(600))),Font(R.font.nunito,FontWeight.Bold,variationSettings=FontVariation.Settings(FontVariation.weight(700)))) else FontFamily.Default
         val t=base.copy(displayLarge=base.displayLarge.copy(fontFamily=font),displayMedium=base.displayMedium.copy(fontFamily=font),displaySmall=base.displaySmall.copy(fontFamily=font),headlineLarge=base.headlineLarge.copy(fontFamily=font),headlineMedium=base.headlineMedium.copy(fontFamily=font),headlineSmall=base.headlineSmall.copy(fontFamily=font),titleLarge=base.titleLarge.copy(fontFamily=font),titleMedium=base.titleMedium.copy(fontFamily=font),titleSmall=base.titleSmall.copy(fontFamily=font),bodyLarge=base.bodyLarge.copy(fontFamily=font),bodyMedium=base.bodyMedium.copy(fontFamily=font),bodySmall=base.bodySmall.copy(fontFamily=font),labelLarge=base.labelLarge.copy(fontFamily=font),labelMedium=base.labelMedium.copy(fontFamily=font),labelSmall=base.labelSmall.copy(fontFamily=font))
         if(!settings.boldText)t else t.copy(
             headlineLarge=t.headlineLarge.copy(fontWeight=FontWeight.SemiBold),

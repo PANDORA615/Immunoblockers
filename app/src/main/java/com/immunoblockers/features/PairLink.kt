@@ -23,12 +23,13 @@ object PairCipher {
     }
 }
 class PairLink(private val context:Context,storeName:String="pair") {
+    companion object { private val exchangeLock=Any(); private val keyLock=Any() }
     private val p=context.getSharedPreferences(storeName,Context.MODE_PRIVATE)
     private fun b64(b:ByteArray)=Base64.encodeToString(b,Base64.NO_WRAP or Base64.URL_SAFE)
     private fun bytes(s:String)=Base64.decode(s,Base64.NO_WRAP or Base64.URL_SAFE)
-    private fun master():javax.crypto.SecretKey {
+    private fun master():javax.crypto.SecretKey = synchronized(keyLock) {
         val store=KeyStore.getInstance("AndroidKeyStore").apply {load(null)}
-        return (store.getKey("pair-local",null) as? javax.crypto.SecretKey)?:KeyGenerator.getInstance("AES","AndroidKeyStore").apply {
+        (store.getKey("pair-local",null) as? javax.crypto.SecretKey)?:KeyGenerator.getInstance("AES","AndroidKeyStore").apply {
             init(KeyGenParameterSpec.Builder("pair-local",KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).build())
         }.generateKey()
@@ -56,10 +57,10 @@ class PairLink(private val context:Context,storeName:String="pair") {
     val lastSync get()=p.getLong("last_sync",0)
     var shareMedicines:Boolean
         get()=p.getBoolean("share_meds",false)
-        set(value){p.edit().putBoolean("share_meds",value).apply()}
+        set(value){synchronized(exchangeLock){p.edit().putBoolean("share_meds",value).apply()}}
     var shareMood:Boolean
         get()=p.getBoolean("share_mood",false)
-        set(value){p.edit().putBoolean("share_mood",value).apply()}
+        set(value){synchronized(exchangeLock){p.edit().putBoolean("share_mood",value).apply()}}
     private val actor get()=p.getString("actor",null)?:UUID.randomUUID().toString().replace("-","").also {p.edit().putString("actor",it).commit()}
     private fun validate(url:String) {val u=URI(url);require(u.scheme=="https"&&!u.host.isNullOrBlank()&&u.userInfo==null&&u.query==null&&u.fragment==null&&(u.path.isNullOrEmpty()||u.path=="/"))}
     fun create(url:String):String {
@@ -91,8 +92,8 @@ class PairLink(private val context:Context,storeName:String="pair") {
             return c.inputStream.bufferedReader().use {JSONObject(it.readText().also {s->require(s.length<500000)})}
         }finally{c.disconnect()}
     }
-    @Synchronized fun sync(rows:List<Occurrence>,meds:List<Medication>) {
-        if(!configured||stopped)return
+    fun sync(rows:List<Occurrence>,meds:List<Medication>) = synchronized(exchangeLock) {
+        if(!configured||stopped)return@synchronized
         val book=LocalBook(context);val now=System.currentTimeMillis()
         val sequence=p.getLong("sequence",0)+1
         p.edit().putLong("sequence",sequence).commit()
@@ -119,7 +120,7 @@ class PairLink(private val context:Context,storeName:String="pair") {
         val c=Cipher.getInstance("AES/GCM/NoPadding");c.init(Cipher.DECRYPT_MODE,master(),GCMParameterSpec(128,data.copyOfRange(0,12)))
         JSONObject(c.doFinal(data.copyOfRange(12,data.size)).toString(Charsets.UTF_8))
     }.getOrNull()
-    @Synchronized fun disconnect() {
+    fun disconnect() = synchronized(exchangeLock) {
         p.edit().putBoolean("stopped",true).remove("partner").commit()
         shareMedicines=false;shareMood=false
         request("DELETE");p.edit().clear().commit()
