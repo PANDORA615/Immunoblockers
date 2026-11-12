@@ -18,6 +18,8 @@ def connect():
     return c
 
 class Handler(BaseHTTPRequestHandler):
+    def setup(self):
+        super().setup();self.connection.settimeout(15)
     def log_message(self,*args): pass
     def send(self,status,data):
         b=json.dumps(data).encode();self.send_response(status)
@@ -34,6 +36,14 @@ class Handler(BaseHTTPRequestHandler):
         room=path[1];token=self.headers.get('Authorization','')
         if not re.fullmatch(r'Bearer [a-f0-9]{64}',token):return self.send(401,{})
         digest=hashlib.sha256(token.encode()).hexdigest();now=time.time()
+        if self.command=='PUT':
+            try:
+                size=int(self.headers.get('Content-Length','0'))
+                if not 0<size<=LIMIT:return self.send(413,{})
+                data=json.loads(self.rfile.read(size));actor=data['actor'];payload=data['payload']
+                if not ID.fullmatch(actor) or not isinstance(payload,str) or len(payload)>200000 or not re.fullmatch(r'[A-Za-z0-9_-]+={0,2}',payload) or len(base64.urlsafe_b64decode(payload))<28:return self.send(400,{})
+            except (ValueError,KeyError,TypeError):return self.send(400,{})
+
         with LOCK,connect() as db:
             expired=[r[0] for r in db.execute('SELECT id FROM rooms WHERE updated<?',(now-TTL,))]
             for old in expired:
@@ -51,12 +61,6 @@ class Handler(BaseHTTPRequestHandler):
                 if not found:return self.send(404,{})
                 return self.send(200,{'slots':[{'actor':a,'payload':p,'updated':int(t*1000)} for a,p,t in db.execute('SELECT actor,payload,updated FROM slots WHERE room=?',(room,))]})
             if self.command!='PUT':return self.send(405,{})
-            try:
-                size=int(self.headers.get('Content-Length','0'))
-                if not 0<size<=LIMIT:return self.send(413,{})
-                data=json.loads(self.rfile.read(size));actor=data['actor'];payload=data['payload']
-                if not ID.fullmatch(actor) or not isinstance(payload,str) or len(payload)>200000 or not re.fullmatch(r'[A-Za-z0-9_-]+={0,2}',payload) or len(base64.urlsafe_b64decode(payload))<28:return self.send(400,{})
-            except (ValueError,KeyError,TypeError):return self.send(400,{})
             writer=self.headers.get('X-Actor-Key','')
             if not re.fullmatch(r'[a-f0-9]{64}',writer):return self.send(401,{})
             whash=hashlib.sha256(writer.encode()).hexdigest()
