@@ -24,7 +24,6 @@ class MainFlowTest {
         compose.onNodeWithText("Тёмная").performClick()
         compose.waitForIdle()
         compose.activityRule.scenario.recreate()
-        compose.onNodeWithText("Настройки").performClick()
         compose.onNodeWithText("Тёмная").assertIsSelected()
     }
 }
