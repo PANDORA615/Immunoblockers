@@ -18,6 +18,7 @@ import java.io.File
 class NewFeaturesTest {
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
     private fun capture(name:String) {
+        compose.mainClock.advanceTimeBy(700)
         compose.waitForIdle()
         val app=ApplicationProvider.getApplicationContext<ImmunoblockersApp>()
         val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?:return

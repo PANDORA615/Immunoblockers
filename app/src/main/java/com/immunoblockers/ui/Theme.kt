@@ -95,9 +95,9 @@ fun AppTheme(settings: ThemeSettings, content: @Composable () -> Unit) {
             medium=RoundedCornerShape(radius.dp),large=RoundedCornerShape(radius.dp),extraLarge=RoundedCornerShape((radius+4).dp))
     }
     CompositionLocalProvider(LocalReducedMotion provides settings.reducedMotion, LocalAppearance provides settings) {
-        if(settings.interfaceStyle=="glass") {
-            val glass=animated.copy(background=Color.Transparent,surface=animated.surface.copy(alpha=.83f),surfaceContainer=animated.surfaceContainer.copy(alpha=.76f),surfaceContainerLow=animated.surfaceContainerLow.copy(alpha=.75f),surfaceContainerHigh=animated.surfaceContainerHigh.copy(alpha=.78f),primaryContainer=animated.primaryContainer.copy(alpha=.82f),secondaryContainer=animated.secondaryContainer.copy(alpha=.82f))
-            MaterialTheme(colorScheme=glass,typography=typography,shapes=shapes){GlassBackdrop(content)}
-        } else MaterialTheme(colorScheme=animated, typography=typography, shapes=shapes, content=content)
+        val glass=animated.copy(background=Color.Transparent,surface=animated.surface.copy(alpha=.83f),surfaceContainer=animated.surfaceContainer.copy(alpha=.76f),surfaceContainerLow=animated.surfaceContainerLow.copy(alpha=.75f),surfaceContainerHigh=animated.surfaceContainerHigh.copy(alpha=.78f),primaryContainer=animated.primaryContainer.copy(alpha=.82f),secondaryContainer=animated.secondaryContainer.copy(alpha=.82f))
+        MaterialTheme(colorScheme=if(settings.interfaceStyle=="glass")glass else animated,typography=typography,shapes=shapes) {
+            GlassBackdrop(enabled=settings.interfaceStyle=="glass",content=content)
+        }
     }
 }

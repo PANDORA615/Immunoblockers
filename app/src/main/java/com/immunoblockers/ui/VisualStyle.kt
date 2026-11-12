@@ -25,10 +25,10 @@ import com.immunoblockers.R
     else Card(onClick=onClick,modifier=modifier,colors=colors,border=border,elevation=elevation,content=content)
 }
 
-@Composable fun GlassBackdrop(content:@Composable ()->Unit) {
+@Composable fun GlassBackdrop(enabled:Boolean,content:@Composable ()->Unit) {
     val c=MaterialTheme.colorScheme
-    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(c.surface,c.secondaryContainer.copy(alpha=1f),c.surface)))) {
-        Canvas(Modifier.fillMaxSize().blur(24.dp)) {
+    Box(Modifier.fillMaxSize().then(if(enabled)Modifier.background(Brush.linearGradient(listOf(c.surface,c.secondaryContainer.copy(alpha=1f),c.surface)))else Modifier)) {
+        if(enabled)Canvas(Modifier.fillMaxSize().blur(24.dp)) {
             drawCircle(Brush.radialGradient(listOf(c.tertiary.copy(alpha=.13f),Color.Transparent),center=androidx.compose.ui.geometry.Offset(size.width*.9f,size.height*.25f),radius=size.width*.9f),radius=size.width*.9f,center=androidx.compose.ui.geometry.Offset(size.width*.9f,size.height*.25f))
             drawCircle(Brush.radialGradient(listOf(c.primary.copy(alpha=.12f),Color.Transparent),center=androidx.compose.ui.geometry.Offset(0f,size.height*.7f),radius=size.width),radius=size.width,center=androidx.compose.ui.geometry.Offset(0f,size.height*.7f))
         }
