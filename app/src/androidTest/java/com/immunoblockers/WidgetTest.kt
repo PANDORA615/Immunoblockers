@@ -52,6 +52,14 @@ class WidgetTest {
             else {assertTrue(result.contains(row.name));assertTrue(result.contains("1,25"))}
         }
     }
+    @Test fun pausedMedicineCannotBeOfferedAsTheNextWidgetDose() {
+        val row=Occurrence("inactive","paused",1,LocalDate.now().toString(),"23:59",0,"На паузе препарат","2","мг")
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val view=WidgetUpdater.render(app,WidgetKind.NEXT,listOf(row),ThemeSettings(),activeMedicationIds=emptySet()).apply(app,FrameLayout(app))
+            assertFalse(text(view).contains(row.name))
+            assertEquals(View.GONE,view.findViewById<View>(R.id.widget_actions).visibility)
+        }
+    }
     @Test fun widgetTakeActionWritesOneDoseAndPreservesQuantity()=runBlocking {
         val now=System.currentTimeMillis()
         val med=Medication(UUID.randomUUID().toString(),"Виджет действие","0.5","таблетка",start=LocalDate.now().toString(),times="23:59",createdAt=now,updatedAt=now)

@@ -37,7 +37,7 @@ class ReminderScheduler(private val context: Context, private val repo: Reposito
     suspend fun reconcileAndSchedule() = mutex.withLock {
         repo.reconcile()
         scheduleLocked()
-        WidgetUpdater.updateAll(context, repo.dao.occurrences(), settings.flow.first())
+        WidgetUpdater.updateAll(context, repo.dao.occurrences(), settings.flow.first(), repo.dao.medications().filter { !it.paused && !it.archived }.map { it.id }.toSet())
     }
     private suspend fun scheduleLocked() {
         val all = repo.dao.occurrences()

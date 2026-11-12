@@ -42,19 +42,19 @@ enum class WidgetKind(val provider: Class<out AppWidgetProvider>, val title: Int
 }
 
 object WidgetUpdater {
-    fun updateAll(context: Context, rows: List<Occurrence>, settings: ThemeSettings) {
+    fun updateAll(context: Context, rows: List<Occurrence>, settings: ThemeSettings, activeMedicationIds: Set<String>) {
         val manager=AppWidgetManager.getInstance(context)
         WidgetKind.entries.forEach {kind ->
             manager.getAppWidgetIds(ComponentName(context,kind.provider)).forEach {id ->
                 val height=manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,220)
-                manager.updateAppWidget(id,render(context,kind,rows,settings,height))
+                manager.updateAppWidget(id,render(context,kind,rows,settings,height,activeMedicationIds))
             }
         }
     }
-    fun render(context: Context, kind: WidgetKind, rows: List<Occurrence>, settings: ThemeSettings, height: Int=220): RemoteViews {
+    fun render(context: Context, kind: WidgetKind, rows: List<Occurrence>, settings: ThemeSettings, height: Int=220, activeMedicationIds: Set<String>?=null): RemoteViews {
         val today=LocalDate.now().toString()
         val current=rows.filter {it.date==today}.sortedBy {it.time}
-        val next=rows.filter {it.state==Occurrence.PENDING&&(it.date>=today||it.snoozedUntil!=null)}.minByOrNull {it.dueAt}
+        val next=rows.filter {(activeMedicationIds==null||it.medicationId in activeMedicationIds)&&it.state==Occurrence.PENDING&&(it.date>=today||it.snoozedUntil!=null)}.minByOrNull {it.dueAt}
         val dark=when(settings.theme){"dark"->true;"light"->false;else->context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK==Configuration.UI_MODE_NIGHT_YES}
         val colors=if(settings.palette=="dynamic"&&Build.VERSION.SDK_INT>=31) {
             if(dark)dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -96,7 +96,7 @@ object WidgetUpdater {
             }
             WidgetKind.TODAY -> {
                 val limit=((height-110)/48).coerceIn(1,6)
-                val pending=current.filter {it.state==Occurrence.PENDING}.take(limit)
+                val pending=current.filter {it.state==Occurrence.PENDING&&(activeMedicationIds==null||it.medicationId in activeMedicationIds)}.take(limit)
                 if(pending.isEmpty())views.setTextViewText(R.id.widget_body,context.getString(if(current.isEmpty())R.string.no_doses else R.string.widget_no_next))
                 pending.forEach {row -> addRow(context,views,if(settings.privateWidgets)"${row.time} · ${context.getString(R.string.widget_hidden)}" else context.getString(R.string.widget_pending_row,row.time,row.name,row.dose.replace('.',','),row.unit),colors.onSurface.toArgb())}
             }

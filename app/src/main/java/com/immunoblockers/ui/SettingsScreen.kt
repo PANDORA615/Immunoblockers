@@ -134,7 +134,7 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
                     val manager=AppWidgetManager.getInstance(context)
                     if(!manager.isRequestPinAppWidgetSupported)manual=true
                     else scope.launch(Dispatchers.IO) {
-                        val preview=WidgetUpdater.render(context,kind,vm.app.repository.dao.occurrences(),appearance)
+                        val preview=WidgetUpdater.render(context,kind,vm.app.repository.dao.occurrences(),appearance,activeMedicationIds=vm.app.repository.dao.medications().filter { !it.paused && !it.archived }.map {it.id}.toSet())
                         withContext(Dispatchers.Main) {
                             val extras=Bundle().apply {putParcelable(AppWidgetManager.EXTRA_APPWIDGET_PREVIEW,preview)}
                             if(!manager.requestPinAppWidget(ComponentName(context,kind.provider),extras,null))manual=true

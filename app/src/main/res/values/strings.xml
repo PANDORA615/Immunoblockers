@@ -193,7 +193,7 @@
   <string name="private_widgets_hint">Названия и дозировки видны только внутри приложения.</string>
   <string name="widget_hidden">Запись скрыта</string>
   <string name="widget_open">Открыть приложение</string>
-  <string name="widget_no_next">На сегодня всё отмечено</string>
+  <string name="widget_no_next">Ближайших приёмов нет</string>
   <string name="widget_no_logs">Отметок пока нет</string>
   <string name="widget_day_counts">Принято %1$d из %2$d · пропущено %3$d</string>
   <string name="widget_ten_minutes">10 мин</string>

@@ -69,7 +69,7 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
         if(meds.none {!it.archived}) item { EmptyState(R.string.no_medications,R.string.no_medications_body) { Button(onClick=add){Text(stringResource(R.string.add_medication))} } }
         else if(doses.isEmpty()) item {EmptyState(R.string.no_doses,R.string.no_doses_body)}
         else if(taken+skipped==doses.size) item {EmptyState(R.string.all_done,R.string.all_done_body)}
-        item {TodayHighlights(rows,blocks,onRow)}
+        item {TodayHighlights(rows.filter {row->row.state!=Occurrence.PENDING||meds.any {it.id==row.medicationId&&!it.paused&&!it.archived}},blocks,onRow)}
         doses.groupBy {it.time}.forEach { (time, group) ->
             item(key="time$time") {Text(time,style=MaterialTheme.typography.titleMedium,modifier=Modifier.padding(top=12.dp))}
             items(group,key={it.id}) {row -> DoseCard(row,{onRow(row)},{vm.mark(row,Occurrence.TAKEN)})}

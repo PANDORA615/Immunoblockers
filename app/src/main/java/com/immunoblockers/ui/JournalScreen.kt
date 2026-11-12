@@ -16,6 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
@@ -28,13 +29,16 @@ import java.time.format.DateTimeFormatter
 fun IntakeChart(days: List<IntakeDay>, selected: String?, onDay: ((LocalDate) -> Unit)? = null) {
     val peak=maxOf(days.maxOfOrNull {it.planned}?:0,1)
     val colors=MaterialTheme.colorScheme
+    val scroll=rememberScrollState()
+    val dayWidth=(48f*maxOf(1f,LocalDensity.current.fontScale)).dp
+    LaunchedEffect(days.firstOrNull()?.date,days.lastOrNull()?.date) {scroll.scrollTo(scroll.maxValue)}
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.Bottom) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(scroll),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.Bottom) {
             days.forEach {day ->
                 val label=stringResource(R.string.chart_day_accessibility,displayDate(day.date.toString()),day.planned,day.taken,day.skipped,day.unmarked,day.waiting)
                 val chosen=selected==day.date.toString()
                 val action=if(onDay==null)Modifier else Modifier.selectable(chosen,onClick={onDay(day.date)},role=Role.Button)
-                Column(Modifier.width(48.dp).then(action).semantics(mergeDescendants=true){contentDescription=label}.padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.width(dayWidth).then(action).semantics(mergeDescendants=true){contentDescription=label}.padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     Text(stringResource(R.string.completion_count,day.taken,day.planned),style=MaterialTheme.typography.labelSmall)
                     Box(Modifier.height(128.dp).width(24.dp),contentAlignment=Alignment.BottomCenter) {
                         if(day.planned==0)Box(Modifier.fillMaxWidth().height(3.dp).background(colors.outlineVariant,MaterialTheme.shapes.small))
@@ -73,10 +77,15 @@ fun JournalScreen(rows: List<Occurrence>, meds: List<Medication>, vm: AppViewMod
     val from=if(period==0)rows.minOfOrNull {LocalDate.parse(it.date)}?.coerceAtMost(today)?:today else today.minusDays(period-1L)
     val periodRows=rows.filter {it.date in from.toString()..today.toString()&&(med.isEmpty()||it.medicationId==med)}
     val selectedRows=periodRows.filter {date==null||it.date==date}
-    val records=selectedRows.filter {state.isEmpty()||it.state==state}.sortedWith(compareBy<Occurrence> {it.markedAt==null}.thenByDescending {it.markedAt?:it.scheduledAt}.thenBy {it.id})
+    val records=selectedRows.filter { row -> when(state) {
+        "unmarked" -> row.state==Occurrence.PENDING&&row.date<today.toString()
+        Occurrence.PENDING -> row.state==Occurrence.PENDING&&row.date>=today.toString()
+        "" -> true
+        else -> row.state==state
+    }}.sortedWith(compareBy<Occurrence> {it.markedAt==null}.thenByDescending {it.markedAt?:it.scheduledAt}.thenBy {it.id})
     val chart=remember(periodRows,from,today){IntakeAnalytics.days(periodRows,maxOf(from,today.minusDays(29)),today,today)}
     val totals=remember(selectedRows){IntakeAnalytics.totals(selectedRows)}
-    val states=listOf("" to stringResource(R.string.all_states),Occurrence.TAKEN to stringResource(R.string.taken),Occurrence.SKIPPED to stringResource(R.string.skipped),Occurrence.PENDING to stringResource(R.string.pending))
+    val states=listOf("" to stringResource(R.string.all_states),Occurrence.TAKEN to stringResource(R.string.taken),Occurrence.SKIPPED to stringResource(R.string.skipped),"unmarked" to stringResource(R.string.unmarked),Occurrence.PENDING to stringResource(R.string.pending))
     val medicines=listOf("" to stringResource(R.string.all_medications))+meds.map {it.id to "${it.name} · ${it.dose.replace('.',',')} ${it.unit}"}
     LazyColumn(modifier=Modifier.testTag("journalList"),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item {PageHeading(stringResource(R.string.history));Text(stringResource(R.string.journal_title),style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.primary)}
@@ -193,7 +202,7 @@ fun TodayHighlights(rows: List<Occurrence>, enabled: Set<String>, onRow: (Occurr
         if("chart" in enabled)Card {
             Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.block_chart),style=MaterialTheme.typography.titleMedium)
-                IntakeChart(IntakeAnalytics.days(rows,today.minusDays(6),today,today),null)
+                IntakeChart(remember(rows,today){IntakeAnalytics.days(rows,today.minusDays(6),today,today)},null)
             }
         }
     }
