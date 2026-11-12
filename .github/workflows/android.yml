@@ -16,6 +16,7 @@ permissions:
   contents: read
 jobs:
   build:
+    if: github.event_name != 'workflow_dispatch' || inputs.publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -138,3 +139,25 @@ jobs:
           cd release
           sha256sum --check Immunoblockers-0.4.0-universal.apk.sha256
           gh release create v0.4.0 Immunoblockers-0.4.0-universal.apk Immunoblockers-0.4.0-universal.apk.sha256 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Immunoblockers 0.4.0' --notes-file ../docs/RELEASE.md --latest
+
+  stage-signed-draft:
+    if: github.event_name == 'workflow_dispatch' && !inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'build-tools;36.0.0'
+          log-accepted-android-sdk-licenses: false
+      - name: Verify and attach the locally signed APK to the existing draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python tools/verify_release.py distribution/Immunoblockers-0.4.0-universal.apk
+          test "$(gh release view v0.4.0 --json isDraft --jq '.isDraft')" = true
+          gh release upload v0.4.0 distribution/Immunoblockers-0.4.0-universal.apk distribution/Immunoblockers-0.4.0-universal.apk.sha256 --clobber
+          if [ -f docs/screenshots/0.4.0/validation-media.zip ]; then
+            gh release upload v0.4.0 docs/screenshots/0.4.0/validation-media.zip docs/screenshots/0.4.0/navigation.mp4 --clobber
+          fi

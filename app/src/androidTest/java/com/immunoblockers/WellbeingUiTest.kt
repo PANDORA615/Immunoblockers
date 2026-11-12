@@ -29,7 +29,8 @@ class WellbeingUiTest {
   compose.onNodeWithText("Личная заметка о самочувствии").performTextInput(text)
   compose.onNodeWithText("Сохранить самочувствие").performScrollTo().performClick()
   compose.waitUntil(15000){runBlocking {app.repository.wellbeing.first().any {it.text==text&&it.mood==null}}}
-  compose.waitUntil(15000){compose.onAllNodesWithText("Самочувствие сохранено").fetchSemanticsNodes().size==1}
+  try {compose.waitUntil(15000){compose.onAllNodesWithText("Самочувствие сохранено").fetchSemanticsNodes().size==1}}
+  catch(failure:Exception){throw AssertionError(compose.onRoot().printToString(),failure)}
   compose.onNodeWithText("Самочувствие сохранено").assertExists()
   capture("wellbeing")
   compose.activityRule.scenario.recreate()
@@ -56,8 +57,10 @@ class WellbeingUiTest {
    compose.onNodeWithText("Настройки").performClick()
    compose.onNodeWithTag("settingsList").performScrollToNode(hasText("Material 3"))
    compose.onNodeWithText("Material 3").performClick()
+   compose.waitUntil(15000){compose.onAllNodes(hasText("Material 3") and isSelected()).fetchSemanticsNodes().size==1}
    compose.onNodeWithText("Material 3").assertIsSelected()
    compose.onNodeWithText("Liquid Glass + Glassmorphism").performClick()
+   compose.waitUntil(15000){compose.onAllNodes(hasText("Liquid Glass + Glassmorphism") and isSelected()).fetchSemanticsNodes().size==1}
    compose.onNodeWithText("Liquid Glass + Glassmorphism").assertIsSelected()
   }finally {runBlocking {app.settings.save(original)}}
  }

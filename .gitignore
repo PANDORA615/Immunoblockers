@@ -4,7 +4,10 @@
 local.properties
 *.jks
 *.keystore
+*.p12
+*-signing-backup.zip
 *.apk
+*.apk.sha256
 *.aab
 .idea/
 *.iml

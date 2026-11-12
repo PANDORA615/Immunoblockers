@@ -22,7 +22,7 @@ import java.util.UUID
  var text by rememberSaveable {mutableStateOf("")}
  var linkedGroup by rememberSaveable(groupId) {mutableStateOf(groupId)}
  var busy by remember {mutableStateOf(false)}
- var message by remember {mutableStateOf("")}
+ var message by rememberSaveable {mutableStateOf("")}
  val members by produceState<List<Occurrence>>(emptyList(),groupId,entries) {
   value=withContext(Dispatchers.IO) {groupId?.let {id->vm.app.database.wellbeing().members(id).mapNotNull {vm.app.repository.dao.occurrence(it)}.filter {it.state==Occurrence.TAKEN}}?:emptyList()}
  }
@@ -36,8 +36,14 @@ import java.util.UUID
    busy=true;message=""
    val entry=WellbeingEntry(editId?:UUID.randomUUID().toString(),if(editId==null)System.currentTimeMillis() else at,mood.ifBlank {null},text,linkedGroup)
    scope.launch {
-    try {withContext(Dispatchers.IO){vm.app.repository.saveWellbeing(entry)};focus.clearFocus();editId=null;mood="";text="";linkedGroup=null;message="Самочувствие сохранено";vm.refresh()}
-    catch(_:Exception){message="Не удалось сохранить запись"}finally {busy=false}
+    val stored=withContext(Dispatchers.IO){runCatching {vm.app.repository.saveWellbeing(entry)}}
+    if(stored.isSuccess) {
+     editId=null;mood="";text="";linkedGroup=null;message="Самочувствие сохранено"
+     // Keyboard/focus handling is cosmetic and must never turn a committed write into an error.
+     runCatching {focus.clearFocus()}
+     vm.refresh()
+    } else message="Не удалось сохранить запись"
+    busy=false
    }
   }){Text(if(editId==null)"Сохранить самочувствие" else "Сохранить изменения")}
   if(editId!=null)TextButton(onClick={editId=null;mood="";text="";linkedGroup=groupId}){Text("Отмена редактирования")}
