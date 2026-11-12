@@ -83,7 +83,7 @@ jobs:
             if [ ${{ matrix.api }} -ge 33 ]; then adb shell pm grant com.immunoblockers android.permission.POST_NOTIFICATIONS; fi
             if [ ${{ matrix.api }} -ge 31 ]; then adb shell appops set com.immunoblockers SCHEDULE_EXACT_ALARM allow; fi
             adb shell appwidget grantbind --package com.immunoblockers --user 0
-            ./gradlew connectedDebugAndroidTest || { cat app/build/outputs/androidTest-results/connected/debug/*.xml; adb logcat -d -s AndroidRuntime; adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots .screenshots || true; exit 1; }
+            ./gradlew connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true || { cat app/build/outputs/androidTest-results/connected/debug/*.xml; adb logcat -d -s AndroidRuntime; adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots .screenshots || true; exit 1; }
             adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots .screenshots
       - uses: actions/upload-artifact@v4
         if: always()
