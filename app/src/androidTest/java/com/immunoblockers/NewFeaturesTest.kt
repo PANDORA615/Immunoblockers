@@ -9,16 +9,36 @@ import org.junit.Assert.*
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.UUID
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
+import androidx.test.platform.app.InstrumentationRegistry
+import android.graphics.Bitmap
+import java.io.File
 
 class NewFeaturesTest {
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
+    private fun capture(name:String) {
+        compose.waitForIdle()
+        val app=ApplicationProvider.getApplicationContext<ImmunoblockersApp>()
+        val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?:return
+        val folder=File(app.getExternalFilesDir(null),"screenshots").apply{mkdirs()}
+        File(folder,"$name.png").outputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
+        bitmap.recycle()
+    }
     @Test fun materialAndGlassRemainSelectable() {
+        val app=ApplicationProvider.getApplicationContext<ImmunoblockersApp>()
         compose.onNodeWithText("Настройки").performClick()
         compose.onNodeWithTag("settingsList").performScrollToNode(hasText("Material 3"))
         compose.onNodeWithText("Material 3").performClick()
+        runBlocking {withTimeout(15000){while(app.settings.flow.first().interfaceStyle!="material")delay(100)}}
         compose.onNodeWithText("Material 3").assertIsSelected()
+        capture("material-style")
         compose.onNodeWithText("Liquid Glass + Glassmorphism").performClick()
+        runBlocking {withTimeout(15000){while(app.settings.flow.first().interfaceStyle!="glass")delay(100)}}
         compose.onNodeWithText("Liquid Glass + Glassmorphism").assertIsSelected()
+        capture("glass-style")
+        compose.onNodeWithText("Сегодня").performClick()
+        capture("glass-home")
     }
     @Test fun stockIsCalculatedOnceAndUndoRestoresTheAmount() {
         val app=ApplicationProvider.getApplicationContext<ImmunoblockersApp>()
