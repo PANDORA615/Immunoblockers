@@ -31,7 +31,8 @@ class WidgetTest {
         assertEquals(7,providers.size)
         val row=Occurrence("widget-render","render",1,LocalDate.now().toString(),"23:59",LocalDate.now().atTime(23,59).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),"Виджет препарат","1.25","мг")
         for(kind in WidgetKind.entries)for(private in listOf(false,true))for(widgetWidth in listOf(160,320)) {
-            val rows=if(kind==WidgetKind.JOURNAL)listOf(row.copy(state=Occurrence.TAKEN,markedAt=System.currentTimeMillis())) else listOf(row)
+            val samples=listOf(row,row.copy(id="second-render",name="Другой препарат"))
+            val rows=if(kind==WidgetKind.JOURNAL||kind==WidgetKind.PROGRESS)samples.map {it.copy(state=Occurrence.TAKEN,markedAt=System.currentTimeMillis())} else samples
             var result=""
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
                 val view=WidgetUpdater.render(app,kind,rows,ThemeSettings(privateWidgets=private),height=160,width=widgetWidth,latest=WellbeingEntry("private",1,"Хорошо","Личная запись")).apply(app,FrameLayout(app))
@@ -48,7 +49,7 @@ class WidgetTest {
                     bitmap.recycle()
                 }
             }
-            if(private){assertFalse(result.contains(row.name));assertFalse(result.contains("1,25"));assertFalse(result.contains("Личная запись"))}
+            if(private){rows.forEach {assertFalse(result.contains(it.name))};assertFalse(result.contains("1,25"));assertFalse(result.contains("Личная запись"))}
             else if(kind in listOf(WidgetKind.NEXT,WidgetKind.TODAY,WidgetKind.JOURNAL)){assertTrue(result.contains(row.name));assertTrue(result.contains("1,25"))}
         }
     }
@@ -102,7 +103,7 @@ class WidgetTest {
                     putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,height)
                 }
                 assertTrue(manager.bindAppWidgetIdIfAllowed(id,ComponentName(app,kind.provider),options))
-                val displayed=if(kind==WidgetKind.JOURNAL||kind==WidgetKind.PROGRESS||kind==WidgetKind.WEEK)listOf(row.copy(state=Occurrence.TAKEN,markedAt=System.currentTimeMillis()),row.copy(id="second",name="Следующий приём")) else listOf(row,row.copy(id="second",name="Следующий приём"))
+                val displayed=if(kind==WidgetKind.JOURNAL||kind==WidgetKind.PROGRESS||kind==WidgetKind.WEEK)listOf(row.copy(state=Occurrence.TAKEN,markedAt=System.currentTimeMillis()),row.copy(id="second",name="Следующий приём"),row.copy(id="third",name="Последняя отметка",state=Occurrence.SKIPPED,markedAt=System.currentTimeMillis()-1000)) else listOf(row,row.copy(id="second",name="Следующий приём"))
                 manager.updateAppWidget(id,WidgetUpdater.render(app,kind,displayed,ThemeSettings(widgetTheme=theme),height=height,width=width,latest=WellbeingEntry("last",1,"Хорошо","Заметка")))
                 InstrumentationRegistry.getInstrumentation().runOnMainSync {
                     host.startListening()

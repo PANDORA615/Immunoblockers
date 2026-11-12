@@ -94,6 +94,8 @@ object WidgetUpdater {
             if(kind in listOf(WidgetKind.NEXT,WidgetKind.WELLBEING,WidgetKind.PROGRESS))views.setViewVisibility(R.id.widget_body,View.GONE)
             if(kind in listOf(WidgetKind.TODAY,WidgetKind.JOURNAL,WidgetKind.STOCK))views.setViewVisibility(R.id.widget_title,View.GONE)
         }
+        if(!compact&&kind in listOf(WidgetKind.TODAY,WidgetKind.JOURNAL,WidgetKind.STOCK))views.setViewVisibility(R.id.widget_title,View.GONE)
+        if(!compact&&kind==WidgetKind.WELLBEING)views.setViewVisibility(R.id.widget_header,View.GONE)
         views.setViewVisibility(R.id.widget_actions,View.GONE)
         views.removeAllViews(R.id.widget_rows)
         val open=Intent(context,MainActivity::class.java).setAction("widget.${kind.name}")
@@ -110,6 +112,14 @@ object WidgetUpdater {
                 val graph=RemoteViews(context.packageName,R.layout.widget_progress_ring)
                 graph.setImageViewBitmap(R.id.widget_graph,WidgetArtwork.ring(taken,current.size,colors.primary.toArgb(),colors.outlineVariant.toArgb()))
                 views.addView(R.id.widget_rows,graph)
+                if(!compact&&height>=150) {
+                    views.setViewVisibility(R.id.widget_header,View.GONE)
+                    views.setViewVisibility(R.id.widget_body,View.GONE)
+                    current.filter {it.markedAt!=null}.sortedByDescending {it.markedAt}.take(2).forEach {row->
+                        val label=if(settings.privateWidgets)"${row.time} · ${context.getString(R.string.widget_hidden)}" else "${if(row.state==Occurrence.TAKEN)"✓" else "–"} ${row.time} · ${row.name}"
+                        addRow(context,views,label,colors.onSurface.toArgb(),1)
+                    }
+                }
             }
             WidgetKind.WELLBEING -> {
                 views.setTextViewText(R.id.widget_title,if(settings.privateWidgets)context.getString(R.string.widget_hidden) else latest?.mood?:"Самочувствие")
@@ -151,6 +161,15 @@ object WidgetUpdater {
                 views.setTextViewText(R.id.widget_body,if(next==null)context.getString(R.string.widget_open) else if(settings.privateWidgets)timing else context.getString(R.string.widget_next_details,next.dose.replace('.',','),next.unit,timing))
                 if(height<128&&next!=null)views.setTextViewText(R.id.widget_title,"$timing · ${if(settings.privateWidgets)context.getString(R.string.widget_hidden) else next.name}")
                 if(next!=null) {
+                    if(!compact&&height>=150) {
+                        views.setViewVisibility(R.id.widget_header,View.GONE)
+                        views.setInt(R.id.widget_title,"setMaxLines",1)
+                        val later=rows.filter {it.id!=next.id&&it.state==Occurrence.PENDING&&(activeMedicationIds==null||it.medicationId in activeMedicationIds)&&(it.date>=today||it.snoozedUntil!=null)}.minByOrNull {it.dueAt}
+                        later?.let {row->
+                            val time=Instant.ofEpochMilli(row.dueAt).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d.MM HH:mm"))
+                            addRow(context,views,"Далее $time · ${if(settings.privateWidgets)context.getString(R.string.widget_hidden) else row.name}",colors.onSurface.toArgb(),1)
+                        }
+                    }
                     views.setViewVisibility(R.id.widget_actions,View.VISIBLE)
                     views.setTextColor(R.id.widget_take,colors.primary.toArgb())
                     views.setTextColor(R.id.widget_snooze,colors.primary.toArgb())
@@ -160,6 +179,7 @@ object WidgetUpdater {
                 }
             }
             WidgetKind.TODAY -> {
+                views.setTextViewText(R.id.widget_title,context.getString(R.string.completion_count,current.count {it.state==Occurrence.TAKEN},current.size))
                 val limit=if(compact)1 else ((height-95)/32).coerceIn(1,6)
                 val pending=current.filter {it.state==Occurrence.PENDING&&(activeMedicationIds==null||it.medicationId in activeMedicationIds)}.take(limit)
                 if(pending.isEmpty())views.setTextViewText(R.id.widget_body,context.getString(if(current.isEmpty())R.string.no_doses else R.string.widget_no_next))
@@ -168,6 +188,7 @@ object WidgetUpdater {
             WidgetKind.JOURNAL -> {
                 val limit=if(compact)1 else ((height-95)/32).coerceIn(1,6)
                 val marked=rows.filter {it.markedAt!=null}.sortedByDescending {it.markedAt}.take(limit)
+                if(compact&&marked.isNotEmpty())views.setTextViewText(R.id.widget_title,if(settings.privateWidgets)context.getString(R.string.widget_hidden) else marked.first().name)
                 views.setTextViewText(R.id.widget_body,context.getString(if(marked.isEmpty())R.string.widget_no_logs else R.string.last_records))
                 marked.forEach {row ->
                     val time=Instant.ofEpochMilli(row.markedAt!!).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d.MM HH:mm"))
@@ -178,10 +199,11 @@ object WidgetUpdater {
         }
         return views
     }
-    private fun addRow(context: Context, views: RemoteViews, text: String, color: Int) {
+    private fun addRow(context: Context, views: RemoteViews, text: String, color: Int, maxLines:Int=2) {
         val row=RemoteViews(context.packageName,R.layout.intake_widget_row)
         row.setTextViewText(R.id.widget_row_text,text)
         row.setTextColor(R.id.widget_row_text,color)
+        row.setInt(R.id.widget_row_text,"setMaxLines",maxLines)
         views.addView(R.id.widget_rows,row)
     }
     private fun action(context: Context, id: String, type: String) = PendingIntent.getBroadcast(context,0,
