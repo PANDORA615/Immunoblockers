@@ -34,13 +34,6 @@ class FeatureWorker(context:Context,params:WorkerParameters):CoroutineWorker(con
         @Suppress("DEPRECATION")
         val connected=app.getSystemService(ConnectivityManager::class.java).activeNetworkInfo?.isConnected==true
         if(connected) {
-            val pair=PairLink(app)
-            if(pair.configured&&!pair.stopped)runCatching {
-                val before=pair.partner();pair.sync(rows,meds);val after=pair.partner()
-                val signal=after?.optLong("careAt")?:0
-                val mood=after?.optLong("moodAt")?:0
-                if(maxOf(signal,mood)>maxOf(before?.optLong("careAt")?:0,before?.optLong("moodAt")?:0))notify(502,R.string.partner_notification,app.getString(R.string.partner_notification_body),"partner")
-            }
             if(System.currentTimeMillis()-prefs.getLong("update_check",0)>86400000L) {
                 prefs.edit().putLong("update_check",System.currentTimeMillis()).apply()
                 runCatching {Updates.check()?.let {r->if(prefs.getString("update_notified",null)!=r.version){notify(503,R.string.update_notification,r.version,"update");prefs.edit().putString("update_notified",r.version).apply()}}}

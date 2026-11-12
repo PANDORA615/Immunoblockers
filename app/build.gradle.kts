@@ -12,8 +12,8 @@ android {
         applicationId = "com.immunoblockers"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -35,7 +35,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
-            signingConfig = signingConfigs.getByName(if (System.getenv("IMMUNOBLOCKERS_KEYSTORE") != null) "preview" else "debug")
+            signingConfig = if (System.getenv("IMMUNOBLOCKERS_KEYSTORE") != null) signingConfigs.getByName("preview") else null
         }
     }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
@@ -66,6 +66,7 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.room:room-testing:2.7.1")
+    androidTestImplementation("androidx.work:work-testing:2.10.1")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

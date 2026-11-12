@@ -73,6 +73,11 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
     val context=LocalContext.current
     var hex by rememberSaveable(s.seed){mutableStateOf("#%06X".format(s.seed and 0xFFFFFF))}
     var hue by rememberSaveable {mutableFloatStateOf(150f)}
+    val imageScope=rememberCoroutineScope()
+    var imageError by remember {mutableStateOf(false)}
+    val widgetPicker=rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()){uri->if(uri!=null)imageScope.launch {
+        try {val path=copyLocalImage(context,uri);vm.settings {it.copy(widgetImage=path)};imageError=false}catch(_:Exception){imageError=true}
+    }}
     val valid=hex.matches(Regex("#[0-9a-fA-F]{6}"))
     LazyColumn(modifier=Modifier.testTag("settingsList"),contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=32.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item {PageHeading(stringResource(R.string.settings));SectionTitle(R.string.appearance)}
@@ -102,8 +107,22 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
             }}}
         }
         item {SettingSwitch(R.string.widget_confirm,R.string.widget_confirm_hint,s.confirmWidgetActions){v->vm.settings {it.copy(confirmWidgetActions=v)}}}
-        item {SettingSwitch(R.string.helpers_title,value=s.showHelpers){v->vm.settings {it.copy(showHelpers=v)}}}
+        item {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {Text("Спрашивать о самочувствии после приёма",Modifier.weight(1f));Switch(s.askWellbeing,{v->vm.settings {it.copy(askWellbeing=v)}})}
+            Text("Опрос через выбранное время после первого приёма. Android может задержать доставку.")
+            FlowRow {listOf(1,2,4,6).forEach {hours->FilterChip(s.surveyHours==hours,{vm.settings {it.copy(surveyHours=hours)}},label={Text("$hours ч")})}}
+        }
         item {HorizontalDivider();SectionTitle(R.string.launcher_widgets)}
+        item {
+            Text("Оформление виджетов",style=MaterialTheme.typography.titleMedium)
+            Text("Прозрачность: ${s.widgetOpacity*100/255}%")
+            Slider(s.widgetOpacity.toFloat(),{value->vm.settings {it.copy(widgetOpacity=value.toInt())}},valueRange=40f..255f)
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {listOf("system" to "Как в приложении","light" to "Светлый","dark" to "Тёмный").forEach {(key,label)->FilterChip(s.widgetTheme==key,{vm.settings {it.copy(widgetTheme=key)}},label={Text(label)})}}
+            OutlinedButton(onClick={widgetPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}){Text("Выбрать подложку")}
+            if(s.widgetImage.isNotBlank())TextButton(onClick={vm.settings {it.copy(widgetImage="")}}){Text("Удалить подложку")}
+            Text("Выбранное изображение копируется в закрытое хранилище и размывается. Живые обои Android не используются.",style=MaterialTheme.typography.bodySmall)
+            if(imageError)Text("Не удалось открыть изображение")
+        }
         item {WidgetGallery(vm)}
         item {SettingSwitch(R.string.private_widgets,R.string.private_widgets_hint,s.privateWidgets){value->vm.settings {it.copy(privateWidgets=value)}}}
         item {HorizontalDivider();SectionTitle(R.string.notifications)}

@@ -36,5 +36,7 @@
         </provider>
         <receiver android:name=".widgets.WeekWidget" android:exported="false" android:label="@string/widget_week_name"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_week" /></receiver>
         <receiver android:name=".widgets.StockWidget" android:exported="false" android:label="@string/widget_stock_name"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_stock" /></receiver>
+<receiver android:name=".widgets.ProgressWidget" android:exported="false" android:label="@string/widget_progress_name"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_progress" /></receiver>
+<receiver android:name=".widgets.WellbeingWidget" android:exported="false" android:label="@string/widget_wellbeing_name"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wellbeing" /></receiver>
     </application>
 </manifest>

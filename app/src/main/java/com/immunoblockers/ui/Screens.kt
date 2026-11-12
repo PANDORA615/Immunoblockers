@@ -56,7 +56,7 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
         item { PageHeading(stringResource(R.string.today))
             Text(stringResource(R.string.today_label,today.format(DateTimeFormatter.ofPattern("d MMMM, EEEE",ru))),color=MaterialTheme.colorScheme.onSurfaceVariant) }
         item { PermissionStatus(vm, compact=true) }
-        if(showHelpers)item {HomeTools(onTool)}
+
         if(doses.isNotEmpty() && "progress" in blocks) item {
             AppCard(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)) {
                 Column(Modifier.fillMaxWidth().padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
