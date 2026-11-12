@@ -27,7 +27,7 @@ class WellbeingUiTest {
   compose.onNodeWithText("Мы вдвоём").assertDoesNotExist()
   compose.onNodeWithText("Самочувствие").performClick()
   compose.onNodeWithText("Личная заметка о самочувствии").performTextInput(text)
-  compose.onNodeWithText("Сохранить самочувствие").performClick()
+  compose.onNodeWithText("Сохранить самочувствие").performScrollTo().performClick()
   compose.waitUntil(15000){runBlocking {app.repository.wellbeing.first().any {it.text==text&&it.mood==null}}}
   compose.waitUntil(15000){compose.onAllNodesWithText("Самочувствие сохранено").fetchSemanticsNodes().size==1}
   compose.onNodeWithText("Самочувствие сохранено").assertExists()
@@ -35,8 +35,8 @@ class WellbeingUiTest {
   compose.activityRule.scenario.recreate()
   compose.onNodeWithText(text).assertExists()
   compose.onAllNodesWithText("Изменить").onFirst().performScrollTo().performClick()
-  compose.onNodeWithText("Личная заметка о самочувствии").performTextReplacement("$text изменено")
-  compose.onNodeWithText("Сохранить изменения").performClick()
+  compose.onNodeWithText("Личная заметка о самочувствии").performScrollTo().performTextReplacement("$text изменено")
+  compose.onNodeWithText("Сохранить изменения").performScrollTo().performClick()
   compose.waitUntil(15000){runBlocking {app.repository.wellbeing.first().any {it.text=="$text изменено"}}}
   compose.onAllNodesWithText("Удалить").onFirst().performScrollTo().performClick()
   compose.waitUntil(15000){runBlocking {app.repository.wellbeing.first().none {it.text.startsWith(text)}}}
