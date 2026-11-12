@@ -9,6 +9,9 @@ on:
         description: Publish verified v0.4.0 release
         type: boolean
         default: false
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -83,6 +86,12 @@ jobs:
             if [ ${{ matrix.api }} -ge 31 ]; then adb shell appops set com.immunoblockers SCHEDULE_EXACT_ALARM allow; fi
             adb shell appwidget grantbind --package com.immunoblockers --user 0
             ./gradlew connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true || { cat app/build/outputs/androidTest-results/connected/debug/*.xml; adb logcat -d -s AndroidRuntime; adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots test-screenshots || true; exit 1; }
+            mkdir -p test-screenshots
+            adb shell am instrument -w -e class com.immunoblockers.ProcessPersistenceTest -e persistence_phase prepare com.immunoblockers.test/androidx.test.runner.AndroidJUnitRunner > test-screenshots/process-prepare.txt
+            rg -q 'OK \(1 test\)' test-screenshots/process-prepare.txt
+            adb shell am force-stop com.immunoblockers
+            adb shell am instrument -w -e class com.immunoblockers.ProcessPersistenceTest -e persistence_phase verify com.immunoblockers.test/androidx.test.runner.AndroidJUnitRunner > test-screenshots/process-verify.txt
+            rg -q 'OK \(1 test\)' test-screenshots/process-verify.txt
             adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots test-screenshots
             if [ ${{ matrix.api }} -eq 35 ]; then python tools/record_demo.py; fi
       - uses: actions/upload-artifact@v4

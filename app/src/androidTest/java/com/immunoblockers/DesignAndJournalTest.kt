@@ -19,6 +19,8 @@ class DesignAndJournalTest {
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
     private fun screenshot(name:String) {
         compose.waitForIdle()
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        android.os.SystemClock.sleep(350)
         val app=ApplicationProvider.getApplicationContext<ImmunoblockersApp>()
         val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?:return
         val folder=File(app.getExternalFilesDir(null),"screenshots").apply{mkdirs()}

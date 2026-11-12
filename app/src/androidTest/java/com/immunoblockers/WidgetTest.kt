@@ -92,7 +92,7 @@ class WidgetTest {
         val manager=AppWidgetManager.getInstance(app)
         val host=AppWidgetHost(app,204)
         val row=Occurrence("host-render","render",1,LocalDate.now().toString(),"23:59",System.currentTimeMillis()+60_000,"Виджет препарат","1.25","мг")
-        for(kind in WidgetKind.entries)for(width in listOf(160,320)) {
+        for(kind in WidgetKind.entries)for(width in listOf(160,320))for(theme in listOf("light","dark")) {
             val id=host.allocateAppWidgetId()
             try {
                 val options=android.os.Bundle().apply {
@@ -102,7 +102,7 @@ class WidgetTest {
                     putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,160)
                 }
                 assertTrue(manager.bindAppWidgetIdIfAllowed(id,ComponentName(app,kind.provider),options))
-                manager.updateAppWidget(id,WidgetUpdater.render(app,kind,listOf(row),ThemeSettings(),height=160,width=width,latest=WellbeingEntry("last",1,"Хорошо","Заметка")))
+                manager.updateAppWidget(id,WidgetUpdater.render(app,kind,listOf(row),ThemeSettings(widgetTheme=theme),height=160,width=width,latest=WellbeingEntry("last",1,"Хорошо","Заметка")))
                 InstrumentationRegistry.getInstrumentation().runOnMainSync {
                     host.startListening()
                     val view=host.createView(app,id,manager.getAppWidgetInfo(id))
@@ -113,7 +113,7 @@ class WidgetTest {
                     val bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
                     view.draw(Canvas(bitmap))
                     val folder=File(app.getExternalFilesDir(null),"screenshots").apply {mkdirs()}
-                    File(folder,"host-${kind.name}-$width.png").outputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
+                    File(folder,"host-${kind.name}-$width-$theme.png").outputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
                     bitmap.recycle()
                     if(kind==WidgetKind.NEXT||kind==WidgetKind.WELLBEING) {
                         val button=view.findViewById<TextView>(R.id.widget_take)

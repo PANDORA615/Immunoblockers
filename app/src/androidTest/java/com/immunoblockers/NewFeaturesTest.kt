@@ -20,6 +20,8 @@ class NewFeaturesTest {
     private fun capture(name:String) {
         compose.mainClock.advanceTimeBy(700)
         compose.waitForIdle()
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        android.os.SystemClock.sleep(350)
         val app=ApplicationProvider.getApplicationContext<ImmunoblockersApp>()
         val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?:return
         val folder=File(app.getExternalFilesDir(null),"screenshots").apply{mkdirs()}

@@ -23,11 +23,11 @@ class WellbeingUiTest {
   compose.onNodeWithText("Самочувствие сохранено").assertExists()
   compose.activityRule.scenario.recreate()
   compose.onNodeWithText(text).assertExists()
-  compose.onAllNodesWithText("Изменить").onFirst().performClick()
+  compose.onAllNodesWithText("Изменить").onFirst().performScrollTo().performClick()
   compose.onNodeWithText("Личная заметка о самочувствии").performTextReplacement("$text изменено")
   compose.onNodeWithText("Сохранить изменения").performClick()
   compose.waitUntil(15000){runBlocking {app.repository.wellbeing.first().any {it.text=="$text изменено"}}}
-  compose.onAllNodesWithText("Удалить").onFirst().performClick()
+  compose.onAllNodesWithText("Удалить").onFirst().performScrollTo().performClick()
   compose.waitUntil(15000){runBlocking {app.repository.wellbeing.first().none {it.text.startsWith(text)}}}
  }
  @Test fun profileAndFiveTabsSurviveStyleChange() {

@@ -15,6 +15,7 @@ import java.util.UUID
 @Composable fun WellbeingScreen(vm:AppViewModel,groupId:String?=null) {
  val entries by vm.app.repository.wellbeing.collectAsStateWithLifecycle(emptyList())
  val scope=rememberCoroutineScope()
+ val focus=androidx.compose.ui.platform.LocalFocusManager.current
  var editId by rememberSaveable {mutableStateOf<String?>(null)}
  var at by rememberSaveable {mutableLongStateOf(0)}
  var mood by rememberSaveable {mutableStateOf("")}
@@ -35,7 +36,7 @@ import java.util.UUID
    busy=true;message=""
    val entry=WellbeingEntry(editId?:UUID.randomUUID().toString(),if(editId==null)System.currentTimeMillis() else at,mood.ifBlank {null},text,linkedGroup)
    scope.launch {
-    try {withContext(Dispatchers.IO){vm.app.repository.saveWellbeing(entry)};editId=null;mood="";text="";linkedGroup=null;message="Самочувствие сохранено";vm.refresh()}
+    try {withContext(Dispatchers.IO){vm.app.repository.saveWellbeing(entry)};focus.clearFocus();editId=null;mood="";text="";linkedGroup=null;message="Самочувствие сохранено";vm.refresh()}
     catch(_:Exception){message="Не удалось сохранить запись"}finally {busy=false}
    }
   }){Text(if(editId==null)"Сохранить самочувствие" else "Сохранить изменения")}
