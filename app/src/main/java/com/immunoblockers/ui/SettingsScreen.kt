@@ -50,7 +50,7 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
     val exact=remember(tick){vm.app.reminders.exactAvailable()}
     var explain by remember {mutableStateOf(false)}
     val request=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){tick++}
-    if(!compact||!allowed||!exact) Card(colors=CardDefaults.cardColors(containerColor=if(allowed)MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.tertiaryContainer)) {
+    if(!compact||!allowed||!exact) AppCard(colors=CardDefaults.cardColors(containerColor=if(allowed)MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.tertiaryContainer)) {
         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Text(stringResource(if(allowed)R.string.permission_ok else R.string.permission_missing),style=MaterialTheme.typography.bodyMedium)
             if(!allowed)TextButton(onClick={if(Build.VERSION.SDK_INT>=33&&!vm.app.reminders.notificationsAvailable())explain=true else notificationSettings(context)}){Text(stringResource(R.string.permission_action))}
@@ -85,6 +85,8 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
             item {Text(stringResource(R.string.preview),style=MaterialTheme.typography.titleMedium)}
             item {FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {listOf(false,true).forEach {dark->PalettePreview(s.seed,dark)}}}
         }
+        item {Text(stringResource(R.string.interface_style),style=MaterialTheme.typography.titleLarge);DesignChoices(s.interfaceStyle,listOf("glass" to R.string.glass_style,"material" to R.string.material_style)){value->vm.settings {it.copy(interfaceStyle=value)}};Text(stringResource(R.string.glass_hint),style=MaterialTheme.typography.bodySmall)}
+        item {SettingSwitch(R.string.rounded_font,R.string.rounded_font_hint,s.roundedFont){value->vm.settings {it.copy(roundedFont=value)}}}
         item {HorizontalDivider();SectionTitle(R.string.control_design);Text(stringResource(R.string.control_design_hint),style=MaterialTheme.typography.bodyMedium)}
         item {Text(stringResource(R.string.field_design),style=MaterialTheme.typography.titleSmall);DesignChoices(s.fieldStyle,listOf("filled" to R.string.fields_filled,"outlined" to R.string.fields_outlined)){value->vm.settings {it.copy(fieldStyle=value)}}}
         item {Text(stringResource(R.string.corner_design),style=MaterialTheme.typography.titleSmall);DesignChoices(s.corners,listOf("rounded" to R.string.corners_rounded,"soft" to R.string.corners_soft,"square" to R.string.corners_square)){value->vm.settings {it.copy(corners=value)}}}
@@ -99,6 +101,8 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
                 current.copy(todayBlocks=chosen.joinToString(","))
             }}}
         }
+        item {SettingSwitch(R.string.widget_confirm,R.string.widget_confirm_hint,s.confirmWidgetActions){v->vm.settings {it.copy(confirmWidgetActions=v)}}}
+        item {SettingSwitch(R.string.helpers_title,value=s.showHelpers){v->vm.settings {it.copy(showHelpers=v)}}}
         item {HorizontalDivider();SectionTitle(R.string.launcher_widgets)}
         item {WidgetGallery(vm)}
         item {SettingSwitch(R.string.private_widgets,R.string.private_widgets_hint,s.privateWidgets){value->vm.settings {it.copy(privateWidgets=value)}}}
@@ -152,7 +156,7 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
     MaterialTheme(colorScheme=scheme) {Surface(color=scheme.surface,shape=MaterialTheme.shapes.large,modifier=Modifier.widthIn(min=140.dp,max=260.dp)) {
         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Text(stringResource(if(dark)R.string.dark else R.string.light),style=MaterialTheme.typography.titleSmall)
-            Card(colors=CardDefaults.cardColors(containerColor=scheme.primaryContainer)){Text(stringResource(R.string.preview_body),modifier=Modifier.padding(12.dp),color=scheme.onPrimaryContainer)}
+            AppCard(colors=CardDefaults.cardColors(containerColor=scheme.primaryContainer)){Text(stringResource(R.string.preview_body),modifier=Modifier.padding(12.dp),color=scheme.onPrimaryContainer)}
             Button(onClick={checked=!checked}){Text(stringResource(if(checked)R.string.take else R.string.taken))}
             Switch(checked=checked,onCheckedChange={checked=it})
         }

@@ -1,0 +1,16 @@
+services:
+  relay:
+    build: .
+    restart: unless-stopped
+    volumes: ["pair-data:/data"]
+    expose: ["8080"]
+  caddy:
+    image: caddy:2.10.2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      PAIR_DOMAIN: ${PAIR_DOMAIN:?Set your domain}
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy-data:/data"]
+volumes:
+  pair-data:
+  caddy-data:

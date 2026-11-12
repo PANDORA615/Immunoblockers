@@ -8,6 +8,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import com.immunoblockers.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -68,8 +71,10 @@ fun AppTheme(settings: ThemeSettings, content: @Composable () -> Unit) {
             }
         }
     }
-    val typography=remember(settings.boldText) {
-        val t=Typography()
+    val typography=remember(settings.boldText,settings.roundedFont) {
+        val base=Typography()
+        val font=if(settings.roundedFont)FontFamily(Font(R.font.nunito,FontWeight.Normal),Font(R.font.nunito,FontWeight.Medium),Font(R.font.nunito,FontWeight.SemiBold),Font(R.font.nunito,FontWeight.Bold)) else FontFamily.Default
+        val t=base.copy(displayLarge=base.displayLarge.copy(fontFamily=font),displayMedium=base.displayMedium.copy(fontFamily=font),displaySmall=base.displaySmall.copy(fontFamily=font),headlineLarge=base.headlineLarge.copy(fontFamily=font),headlineMedium=base.headlineMedium.copy(fontFamily=font),headlineSmall=base.headlineSmall.copy(fontFamily=font),titleLarge=base.titleLarge.copy(fontFamily=font),titleMedium=base.titleMedium.copy(fontFamily=font),titleSmall=base.titleSmall.copy(fontFamily=font),bodyLarge=base.bodyLarge.copy(fontFamily=font),bodyMedium=base.bodyMedium.copy(fontFamily=font),bodySmall=base.bodySmall.copy(fontFamily=font),labelLarge=base.labelLarge.copy(fontFamily=font),labelMedium=base.labelMedium.copy(fontFamily=font),labelSmall=base.labelSmall.copy(fontFamily=font))
         if(!settings.boldText)t else t.copy(
             headlineLarge=t.headlineLarge.copy(fontWeight=FontWeight.SemiBold),
             headlineMedium=t.headlineMedium.copy(fontWeight=FontWeight.SemiBold),
@@ -88,6 +93,9 @@ fun AppTheme(settings: ThemeSettings, content: @Composable () -> Unit) {
             medium=RoundedCornerShape(radius.dp),large=RoundedCornerShape(radius.dp),extraLarge=RoundedCornerShape((radius+4).dp))
     }
     CompositionLocalProvider(LocalReducedMotion provides settings.reducedMotion, LocalAppearance provides settings) {
-        MaterialTheme(colorScheme=animated, typography=typography, shapes=shapes, content=content)
+        if(settings.interfaceStyle=="glass") {
+            val glass=animated.copy(background=Color.Transparent,surface=animated.surface.copy(alpha=.83f),surfaceContainer=animated.surfaceContainer.copy(alpha=.76f),surfaceContainerLow=animated.surfaceContainerLow.copy(alpha=.75f),surfaceContainerHigh=animated.surfaceContainerHigh.copy(alpha=.78f),primaryContainer=animated.primaryContainer.copy(alpha=.82f),secondaryContainer=animated.secondaryContainer.copy(alpha=.82f))
+            MaterialTheme(colorScheme=glass,typography=typography,shapes=shapes){GlassBackdrop(content)}
+        } else MaterialTheme(colorScheme=animated, typography=typography, shapes=shapes, content=content)
     }
 }

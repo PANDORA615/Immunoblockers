@@ -28,7 +28,7 @@ class WidgetTest {
     }
     @Test fun allWidgetLayoutsRenderAndPrivacyHidesDrugAndDose() {
         val providers=AppWidgetManager.getInstance(app).installedProviders.filter {it.provider.packageName==app.packageName}
-        assertEquals(3,providers.size)
+        assertEquals(5,providers.size)
         val row=Occurrence("widget-render","render",1,LocalDate.now().toString(),"23:59",LocalDate.now().atTime(23,59).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),"Виджет препарат","1.25","мг")
         for(kind in WidgetKind.entries)for(private in listOf(false,true)) {
             val rows=if(kind==WidgetKind.JOURNAL)listOf(row.copy(state=Occurrence.TAKEN,markedAt=System.currentTimeMillis())) else listOf(row)
@@ -49,7 +49,7 @@ class WidgetTest {
                 }
             }
             if(private){assertFalse(result.contains(row.name));assertFalse(result.contains("1,25"))}
-            else {assertTrue(result.contains(row.name));assertTrue(result.contains("1,25"))}
+            else if(kind in listOf(WidgetKind.NEXT,WidgetKind.TODAY,WidgetKind.JOURNAL)){assertTrue(result.contains(row.name));assertTrue(result.contains("1,25"))}
         }
     }
     @Test fun pausedMedicineCannotBeOfferedAsTheNextWidgetDose() {
@@ -70,7 +70,7 @@ class WidgetTest {
         val widgetId=host.allocateAppWidgetId()
         try {
             assertTrue("Test host needs: adb shell appwidget grantbind --package com.immunoblockers --user 0",manager.bindAppWidgetIdIfAllowed(widgetId,ComponentName(app,NextDoseWidget::class.java)))
-            manager.updateAppWidget(widgetId,WidgetUpdater.render(app,WidgetKind.NEXT,listOf(row),ThemeSettings()))
+            manager.updateAppWidget(widgetId,WidgetUpdater.render(app,WidgetKind.NEXT,listOf(row),ThemeSettings(confirmWidgetActions=false)))
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
                 host.startListening()
                 val view=host.createView(app,widgetId,manager.getAppWidgetInfo(widgetId))

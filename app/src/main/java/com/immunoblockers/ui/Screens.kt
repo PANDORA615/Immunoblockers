@@ -44,7 +44,8 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
         action?.invoke()
     }
 }
-@Composable fun TodayScreen(rows: List<Occurrence>, meds: List<Medication>, vm: AppViewModel, add: () -> Unit, onRow:(Occurrence)->Unit) {
+@Composable fun TodayScreen(rows: List<Occurrence>, meds: List<Medication>, vm: AppViewModel, add: () -> Unit, onRow:(Occurrence)->Unit, onTool:(String)->Unit = {}) {
+    val showHelpers=LocalAppearance.current.showHelpers
     val blocks=LocalAppearance.current.todayBlocks.split(',').toSet()
     val today = LocalDate.now()
     val doses = rows.filter {it.date==today.toString()}.sortedBy {it.time}
@@ -55,8 +56,9 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
         item { PageHeading(stringResource(R.string.today))
             Text(stringResource(R.string.today_label,today.format(DateTimeFormatter.ofPattern("d MMMM, EEEE",ru))),color=MaterialTheme.colorScheme.onSurfaceVariant) }
         item { PermissionStatus(vm, compact=true) }
+        if(showHelpers)item {HomeTools(onTool)}
         if(doses.isNotEmpty() && "progress" in blocks) item {
-            Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)) {
+            AppCard(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)) {
                 Column(Modifier.fillMaxWidth().padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     Text(stringResource(R.string.day_progress),style=MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.completion_count,taken+skipped,doses.size),style=MaterialTheme.typography.displayMedium)
@@ -79,7 +81,7 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
 @Composable fun DoseCard(row: Occurrence, open:()->Unit, take:(()->Unit)? = null) {
     val complete=row.state!=Occurrence.PENDING
     val color by animateColorAsState(if(complete) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceContainerHigh,tween(Motion.SCREEN),label="card")
-    Card(onClick=open,colors=CardDefaults.cardColors(containerColor=color),modifier=Modifier.fillMaxWidth().animateContentSize(tween(if(LocalReducedMotion.current) Motion.SHORT else Motion.SCREEN))) {
+    AppCard(onClick=open,colors=CardDefaults.cardColors(containerColor=color),modifier=Modifier.fillMaxWidth().animateContentSize(tween(if(LocalReducedMotion.current) Motion.SHORT else Motion.SCREEN))) {
         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 Icon(if(row.state==Occurrence.TAKEN) Icons.Outlined.CheckCircle else if(row.state==Occurrence.SKIPPED) Icons.Outlined.RemoveCircleOutline else Icons.Outlined.Medication,null,tint=MaterialTheme.colorScheme.primary)
@@ -107,7 +109,7 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
         item {AppTextField(query,{query=it},label={Text(stringResource(R.string.search))},leadingIcon={Icon(Icons.Outlined.Search,null)},modifier=Modifier.fillMaxWidth(),singleLine=true)}
         item {Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {FilterChip(!archive,{archive=false},label={Text(stringResource(R.string.active))});FilterChip(archive,{archive=true},label={Text(stringResource(R.string.archive))})}}
         if(filtered.isEmpty()) item {EmptyState(if(query.isEmpty()) R.string.no_medications else R.string.empty_search)}
-        items(filtered,key={it.id}) {med -> Card(onClick={open(med)},modifier=Modifier.fillMaxWidth()) {
+        items(filtered,key={it.id}) {med -> AppCard(onClick={open(med)},modifier=Modifier.fillMaxWidth()) {
             Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text(med.name,style=MaterialTheme.typography.titleLarge)
                 Text(stringResource(R.string.details_dose,med.dose,med.unit),style=MaterialTheme.typography.bodyLarge)

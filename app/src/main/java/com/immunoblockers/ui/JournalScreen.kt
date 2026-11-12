@@ -66,10 +66,10 @@ fun IntakeChart(days: List<IntakeDay>, selected: String?, onDay: ((LocalDate) ->
 }
 
 @Composable
-fun JournalScreen(rows: List<Occurrence>, meds: List<Medication>, vm: AppViewModel, onRow: (Occurrence) -> Unit) {
+fun JournalScreen(rows: List<Occurrence>, meds: List<Medication>, vm: AppViewModel, onRow: (Occurrence) -> Unit, initialDate:String?=null) {
     val appearance=LocalAppearance.current
-    var period by rememberSaveable {mutableIntStateOf(7)}
-    var date by rememberSaveable {mutableStateOf<String?>(null)}
+    var period by rememberSaveable {mutableIntStateOf(if(initialDate==null)7 else 0)}
+    var date by rememberSaveable {mutableStateOf<String?>(initialDate)}
     var pickDate by rememberSaveable {mutableStateOf(false)}
     var med by rememberSaveable {mutableStateOf("")}
     var state by rememberSaveable {mutableStateOf("")}
@@ -119,7 +119,7 @@ fun JournalScreen(rows: List<Occurrence>, meds: List<Medication>, vm: AppViewMod
         if(totals.isNotEmpty()) {
             item {Text(stringResource(R.string.medicine_totals),style=MaterialTheme.typography.titleLarge);Text(stringResource(R.string.medicine_totals_hint),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
             items(totals,key={"total|${it.medicationId}|${it.name}|${it.unit}"}) {total ->
-                Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)) {
+                AppCard(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)) {
                     Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                         Text(total.name,style=MaterialTheme.typography.titleMedium)
                         Text(if(total.amount==null)stringResource(R.string.amount_unknown) else stringResource(R.string.total_medication,total.count,decimalLabel(total.amount),total.unit),style=MaterialTheme.typography.titleSmall)
@@ -160,7 +160,7 @@ fun JournalEntry(row: Occurrence, compact: Boolean=false, open: () -> Unit) {
     val marked=row.markedAt?.let(::displayInstant)
     val actual=if(marked==null)stringResource(if(row.state==Occurrence.PENDING)R.string.pending else R.string.log_time_missing)
         else stringResource(if(row.state==Occurrence.SKIPPED)R.string.actual_skipped else R.string.actual_taken,marked)
-    Card(onClick=open,modifier=Modifier.fillMaxWidth()) {
+    AppCard(onClick=open,modifier=Modifier.fillMaxWidth()) {
         Row(Modifier.padding(if(compact)12.dp else 18.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             Surface(color=if(row.state==Occurrence.TAKEN)colors.primaryContainer else colors.surfaceContainerHighest,shape=CircleShape) {
                 Icon(if(row.state==Occurrence.TAKEN)Icons.Outlined.Check else if(row.state==Occurrence.SKIPPED)Icons.Outlined.Close else Icons.Outlined.Schedule,null,Modifier.padding(10.dp).size(20.dp))
@@ -184,7 +184,7 @@ fun TodayHighlights(rows: List<Occurrence>, enabled: Set<String>, onRow: (Occurr
     val todayRows=rows.filter {it.date==today.toString()}
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
         if("next" in enabled)todayRows.filter {it.state==Occurrence.PENDING}.minByOrNull {it.dueAt}?.let {next ->
-            Card(onClick={onRow(next)},colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.secondaryContainer)) {
+            AppCard(onClick={onRow(next)},colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.secondaryContainer)) {
                 Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.next_medication),style=MaterialTheme.typography.labelLarge)
                     Text("${next.time} · ${next.name}",style=MaterialTheme.typography.titleLarge)

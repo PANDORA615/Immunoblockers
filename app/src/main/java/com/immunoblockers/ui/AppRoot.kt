@@ -31,7 +31,7 @@ fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit, r
     val settings by vm.settings.collectAsStateWithLifecycle()
     val nav = rememberNavController()
     LaunchedEffect(requestedScreen) {
-        if(requestedScreen in listOf("today","history")) {
+        if(requestedScreen in listOf("today","history","tools/stock","tools/partner","tools/update")) {
             nav.navigate(requestedScreen!!) { popUpTo(nav.graph.startDestinationId) {saveState=true};launchSingleTop=true;restoreState=true }
             consumeScreen()
         }
@@ -62,14 +62,19 @@ fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit, r
     Scaffold(
         topBar={ if(main) CenterAlignedTopAppBar(title={Text(stringResource(R.string.app_name), style=MaterialTheme.typography.titleLarge)}) },
         snackbarHost={ SnackbarHost(snack) },
-        bottomBar={ if(main) NavigationBar { tabs.forEach { (path, title, icon) -> NavigationBarItem(selected=route==path, onClick={nav.navigate(path) { popUpTo(nav.graph.startDestinationId) { saveState=true }; launchSingleTop=true; restoreState=true }}, icon={Icon(icon, null)}, label={Text(stringResource(title))}) } } },
+        bottomBar={ if(main&&settings.interfaceStyle=="glass")LiquidNavigation(route){path->nav.navigate(path){popUpTo(nav.graph.startDestinationId){saveState=true};launchSingleTop=true;restoreState=true}} else if(main) NavigationBar { tabs.forEach { (path, title, icon) -> NavigationBarItem(selected=route==path, onClick={nav.navigate(path) { popUpTo(nav.graph.startDestinationId) { saveState=true }; launchSingleTop=true; restoreState=true }}, icon={Icon(icon, null)}, label={Text(stringResource(title))}) } } },
         floatingActionButton={ if(route == "today" || route == "medications") ExtendedFloatingActionButton(modifier=Modifier.testTag("addMedication"),onClick={nav.navigate("edit/new")}, icon={Icon(Icons.Outlined.Add,null)}, text={Text(stringResource(R.string.add_medication))}) }
     ) { padding ->
-        NavHost(nav, "today", modifier=Modifier.padding(padding), enterTransition={ fadeIn(tween(duration)) }, exitTransition={ fadeOut(tween(duration)) }) {
-            composable("today") { TodayScreen(rows, meds, vm, {nav.navigate("edit/new")}, {selected=it.id}) }
+        NavHost(nav, "today", modifier=Modifier.padding(padding), enterTransition={ if(settings.reducedMotion)fadeIn(tween(100)) else fadeIn(tween(duration))+slideInHorizontally(tween(duration)){it/12}+scaleIn(tween(duration),initialScale=.97f) }, exitTransition={ fadeOut(tween(duration)) }) {
+            composable("today") { TodayScreen(rows, meds, vm, {nav.navigate("edit/new")}, {selected=it.id}, {nav.navigate("tools/$it")}) }
             composable("medications") { MedicationsScreen(meds, {nav.navigate("detail/${it.id}")}) }
             composable("history") { JournalScreen(rows, meds, vm, onRow={selected=it.id}) }
             composable("settings") { SettingsScreen(settings, vm) }
+            composable("tools/{kind}"){back->ToolScreen(back.arguments?.getString("kind")?:"stock",vm,{nav.popBackStack()}){date->nav.navigate("day/$date")}}
+            composable("day/{date}"){back->Column {
+                TopAppBar(title={Text(stringResource(R.string.history))},navigationIcon={TextButton(onClick={nav.popBackStack()}){Text(stringResource(R.string.back))}})
+                JournalScreen(rows,meds,vm,onRow={selected=it.id},initialDate=back.arguments?.getString("date"))
+            }}
             composable("edit/{id}") { back ->
                 val id = back.arguments?.getString("id")
                 if(id == "new" || meds.any { it.id==id }) MedicationEditor(meds.firstOrNull {it.id==id}, {nav.popBackStack()}, vm)

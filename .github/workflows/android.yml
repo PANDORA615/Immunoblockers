@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish v0.2.0 preview release
+        description: Publish v0.3.0 preview release
         type: boolean
         default: false
 permissions:
@@ -37,20 +37,21 @@ jobs:
             echo "IMMUNOBLOCKERS_KEYSTORE=$RUNNER_TEMP/preview.jks" >> "$GITHUB_ENV"
             echo "IMMUNOBLOCKERS_STORE_PASSWORD=$SIGNING_PASSWORD" >> "$GITHUB_ENV"
           fi
+      - run: python -m unittest discover -s server
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease assembleDebugAndroidTest
       - name: Prepare universal APK
-        run: cp app/build/outputs/apk/release/app-release.apk Immunoblockers-0.2.0-universal.apk
+        run: cp app/build/outputs/apk/release/app-release.apk Immunoblockers-0.3.0-universal.apk
       - uses: actions/upload-artifact@v4
         with:
           name: Immunoblockers-universal
-          path: Immunoblockers-0.2.0-universal.apk
+          path: Immunoblockers-0.3.0-universal.apk
       - name: Publish preview
         if: github.event_name == 'workflow_dispatch' && inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           test -n "$IMMUNOBLOCKERS_KEYSTORE"
-          gh release create v0.2.0 Immunoblockers-0.2.0-universal.apk --target "$GITHUB_SHA" --title 'Immunoblockers 0.2.0 — Android preview' --notes-file docs/RELEASE.md
+          gh release create v0.3.0 Immunoblockers-0.3.0-universal.apk --target "$GITHUB_SHA" --title 'Immunoblockers 0.3.0 — Android preview' --notes-file docs/RELEASE.md
   device-tests:
     name: Android ${{ matrix.api }} device tests
     strategy:
@@ -71,6 +72,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Enable KVM
         run: sudo chmod 666 /dev/kvm
+      - name: Start isolated HTTPS pairing relay
+        run: |
+          mkdir -p app/src/debug/res/raw
+          openssl req -x509 -newkey rsa:2048 -keyout "$RUNNER_TEMP/relay.key" -out app/src/debug/res/raw/test_ca.pem -days 1 -nodes -subj '/CN=Immunoblockers test relay' -addext 'subjectAltName=IP:10.0.2.2,DNS:localhost'
+          PAIR_DB="$RUNNER_TEMP/pairs.sqlite3" RELAY_TLS_CERT="$PWD/app/src/debug/res/raw/test_ca.pem" RELAY_TLS_KEY="$RUNNER_TEMP/relay.key" nohup python server/relay.py > "$RUNNER_TEMP/relay.log" 2>&1 &
       - name: Room, widgets, journal and Compose
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -85,6 +91,7 @@ jobs:
             adb shell appwidget grantbind --package com.immunoblockers --user 0
             ./gradlew connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true || { cat app/build/outputs/androidTest-results/connected/debug/*.xml; adb logcat -d -s AndroidRuntime; adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots test-screenshots || true; exit 1; }
             adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots test-screenshots
+            if [ ${{ matrix.api }} -eq 35 ]; then python tools/record_demo.py; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:

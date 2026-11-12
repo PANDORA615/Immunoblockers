@@ -1,0 +1,4 @@
+{$PAIR_DOMAIN} {
+    request_body { max_size 256KB }
+    reverse_proxy relay:8080
+}

@@ -17,6 +17,8 @@ class ImmunoblockersApp : Application() {
     override fun onCreate() {
         super.onCreate()
         reminders.createChannel()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork("feature_checks",ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<com.immunoblockers.features.FeatureWorker>(15,TimeUnit.MINUTES).build())
         WorkManager.getInstance(this).enqueueUniquePeriodicWork("reconcile", ExistingPeriodicWorkPolicy.KEEP,
             PeriodicWorkRequestBuilder<ReconcileWorker>(12, TimeUnit.HOURS).build())
         appScope.launch { reminders.reconcileAndSchedule() }

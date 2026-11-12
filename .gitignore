@@ -8,3 +8,6 @@ local.properties
 *.aab
 .idea/
 *.iml
+
+__pycache__/
+*.sqlite3

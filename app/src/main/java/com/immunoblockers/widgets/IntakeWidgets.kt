@@ -17,6 +17,12 @@ import com.immunoblockers.*
 import com.immunoblockers.data.*
 import com.immunoblockers.reminders.*
 import com.immunoblockers.ui.seedScheme
+import com.immunoblockers.features.LocalBook
+import com.immunoblockers.data.IntakeAnalytics
+import com.immunoblockers.data.decimalLabel
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import kotlinx.coroutines.launch
 import java.time.*
 import java.time.format.DateTimeFormatter
@@ -34,11 +40,15 @@ open class IntakeWidgetProvider : AppWidgetProvider() {
 class NextDoseWidget : IntakeWidgetProvider()
 class TodayWidget : IntakeWidgetProvider()
 class JournalWidget : IntakeWidgetProvider()
+class WeekWidget : IntakeWidgetProvider()
+class StockWidget : IntakeWidgetProvider()
 
 enum class WidgetKind(val provider: Class<out AppWidgetProvider>, val title: Int, val description: Int) {
     NEXT(NextDoseWidget::class.java,R.string.widget_next_name,R.string.widget_next_description),
     TODAY(TodayWidget::class.java,R.string.widget_today_name,R.string.widget_today_description),
-    JOURNAL(JournalWidget::class.java,R.string.widget_journal_name,R.string.widget_journal_description)
+    JOURNAL(JournalWidget::class.java,R.string.widget_journal_name,R.string.widget_journal_description),
+    WEEK(WeekWidget::class.java,R.string.widget_week_name,R.string.widget_week_description),
+    STOCK(StockWidget::class.java,R.string.widget_stock_name,R.string.widget_stock_description)
 }
 
 object WidgetUpdater {
@@ -62,6 +72,7 @@ object WidgetUpdater {
         val views=RemoteViews(context.packageName,R.layout.intake_widget)
         views.setImageViewResource(R.id.widget_background,when(settings.corners){"square"->R.drawable.widget_square;"soft"->R.drawable.widget_soft;else->R.drawable.widget_rounded})
         views.setInt(R.id.widget_background,"setColorFilter",colors.surfaceContainer.toArgb())
+        views.setInt(R.id.widget_background,"setImageAlpha",if(settings.interfaceStyle=="glass")220 else 255)
         views.setTextViewText(R.id.widget_header,context.getString(kind.title))
         views.setTextColor(R.id.widget_header,colors.primary.toArgb())
         views.setTextColor(R.id.widget_title,colors.onSurface.toArgb())
@@ -75,12 +86,35 @@ object WidgetUpdater {
         views.setViewVisibility(R.id.widget_actions,View.GONE)
         views.removeAllViews(R.id.widget_rows)
         val open=Intent(context,MainActivity::class.java).setAction("widget.${kind.name}")
-            .putExtra("screen",if(kind==WidgetKind.JOURNAL)"history" else "today")
+            .putExtra("screen",if(kind==WidgetKind.JOURNAL||kind==WidgetKind.WEEK)"history" else if(kind==WidgetKind.STOCK)"tools/stock" else "today")
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         if(kind==WidgetKind.NEXT&&next!=null)open.putExtra("doseId",next.id)
         val launch=PendingIntent.getActivity(context,0,open,PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         views.setOnClickPendingIntent(R.id.widget_root,launch)
         when(kind) {
+            WidgetKind.WEEK -> {
+                val days=IntakeAnalytics.days(rows,LocalDate.now().minusDays(6),LocalDate.now(),LocalDate.now())
+                views.setTextViewText(R.id.widget_title,context.getString(R.string.completion_count,days.sumOf {it.taken},days.sumOf {it.planned}))
+                views.setTextViewText(R.id.widget_body,context.getString(R.string.widget_week_name))
+                val bitmap=Bitmap.createBitmap(600,160,Bitmap.Config.ARGB_8888)
+                val canvas=Canvas(bitmap);val paint=Paint(Paint.ANTI_ALIAS_FLAG)
+                val peak=maxOf(1,days.maxOf {it.planned})
+                days.forEachIndexed {i,day->
+                    val left=20f+i*84;paint.color=colors.outlineVariant.toArgb();canvas.drawRoundRect(left,120f-day.planned*90f/peak,left+40,120f,6f,6f,paint)
+                    paint.color=colors.primary.toArgb();canvas.drawRoundRect(left,120f-day.taken*90f/peak,left+40,120f,6f,6f,paint)
+                    paint.color=colors.onSurface.toArgb();paint.textSize=22f;canvas.drawText(day.date.dayOfMonth.toString(),left+5,150f,paint)
+                }
+                val graph=RemoteViews(context.packageName,R.layout.widget_week_graph)
+                graph.setImageViewBitmap(R.id.widget_graph,bitmap)
+                graph.setContentDescription(R.id.widget_graph,days.joinToString(". "){"${it.date}: ${it.taken}/${it.planned}"})
+                views.addView(R.id.widget_rows,graph)
+            }
+            WidgetKind.STOCK -> {
+                val stocks=LocalBook(context).stocks(rows)
+                views.setTextViewText(R.id.widget_title,context.getString(R.string.tools_stock))
+                views.setTextViewText(R.id.widget_body,context.getString(if(stocks.isEmpty())R.string.stock_empty else R.string.stock_hint))
+                stocks.take(((height-100)/48).coerceIn(1,5)).forEach {stock->addRow(context,views,if(settings.privateWidgets)context.getString(R.string.widget_hidden)else "${stock.name} · ${decimalLabel(stock.remaining)} ${stock.unit}",colors.onSurface.toArgb())}
+            }
             WidgetKind.NEXT -> {
                 views.setTextViewText(R.id.widget_title,if(next==null)context.getString(R.string.widget_no_next) else if(settings.privateWidgets)context.getString(R.string.private_title) else next.name)
                 val dueTime=next?.let {Instant.ofEpochMilli(it.dueAt).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d.MM HH:mm"))}.orEmpty()
@@ -90,7 +124,8 @@ object WidgetUpdater {
                     views.setViewVisibility(R.id.widget_actions,View.VISIBLE)
                     views.setTextColor(R.id.widget_take,colors.primary.toArgb())
                     views.setTextColor(R.id.widget_snooze,colors.primary.toArgb())
-                    views.setOnClickPendingIntent(R.id.widget_take,action(context,next.id,ReminderScheduler.TAKE))
+                    val take=if(settings.confirmWidgetActions)PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java).setData(Uri.parse("immunoblockers://confirm/${Uri.encode(next.id)}")).putExtra("doseId",next.id).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)else action(context,next.id,ReminderScheduler.TAKE)
+                    views.setOnClickPendingIntent(R.id.widget_take,take)
                     views.setOnClickPendingIntent(R.id.widget_snooze,action(context,next.id,ReminderScheduler.SNOOZE))
                 }
             }
