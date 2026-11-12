@@ -84,9 +84,15 @@ object WidgetUpdater {
         views.setTextColor(R.id.widget_body,colors.onSurfaceVariant.toArgb())
         views.setTextViewText(R.id.widget_title,context.getString(R.string.app_name))
         views.setTextViewText(R.id.widget_body,context.getString(R.string.widget_day_counts,current.count {it.state==Occurrence.TAKEN},current.size,current.count {it.state==Occurrence.SKIPPED}))
-        if(compact) {
+        if(compact||height<150) {
             views.setViewVisibility(R.id.widget_header,View.GONE)
             views.setInt(R.id.widget_body,"setMaxLines",1)
+        }
+        if(compact && height<150)views.setInt(R.id.widget_title,"setMaxLines",1)
+        views.setInt(R.id.widget_body,"setMaxLines",if(kind==WidgetKind.WELLBEING&&!compact)2 else 1)
+        if(height<128) {
+            if(kind in listOf(WidgetKind.NEXT,WidgetKind.WELLBEING,WidgetKind.PROGRESS))views.setViewVisibility(R.id.widget_body,View.GONE)
+            if(kind in listOf(WidgetKind.TODAY,WidgetKind.JOURNAL,WidgetKind.STOCK))views.setViewVisibility(R.id.widget_title,View.GONE)
         }
         views.setViewVisibility(R.id.widget_actions,View.GONE)
         views.removeAllViews(R.id.widget_rows)
@@ -108,6 +114,7 @@ object WidgetUpdater {
             WidgetKind.WELLBEING -> {
                 views.setTextViewText(R.id.widget_title,if(settings.privateWidgets)context.getString(R.string.widget_hidden) else latest?.mood?:"Самочувствие")
                 views.setTextViewText(R.id.widget_body,if(settings.privateWidgets)"Откройте приложение" else latest?.let { val date=Instant.ofEpochMilli(it.recordedAt).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d.MM HH:mm")); if(compact)it.text.take(80).ifBlank {date} else "${it.text.take(180)} · $date" }?:"Записей пока нет")
+                if(height<128&&!settings.privateWidgets&&latest!=null)views.setTextViewText(R.id.widget_title,latest.mood?:latest.text)
                 views.setViewVisibility(R.id.widget_actions,View.VISIBLE)
                 views.setViewVisibility(R.id.widget_snooze,View.GONE)
                 views.setTextViewText(R.id.widget_take,"Добавить")
@@ -129,19 +136,20 @@ object WidgetUpdater {
                 val graph=RemoteViews(context.packageName,R.layout.widget_week_graph)
                 graph.setImageViewBitmap(R.id.widget_graph,bitmap)
                 graph.setContentDescription(R.id.widget_graph,days.joinToString(". "){"${it.date}: ${it.taken}/${it.planned}"})
-                views.addView(R.id.widget_rows,graph)
+                if(height>=150)views.addView(R.id.widget_rows,graph)
             }
             WidgetKind.STOCK -> {
                 val stocks=LocalBook(context).stocks(rows)
                 views.setTextViewText(R.id.widget_title,context.getString(R.string.tools_stock))
                 views.setTextViewText(R.id.widget_body,context.getString(if(stocks.isEmpty())R.string.stock_empty else R.string.stock_hint))
-                stocks.take((if(compact)1 else ((height-110)/48).coerceIn(1,5))).forEach {stock->addRow(context,views,if(settings.privateWidgets)context.getString(R.string.widget_hidden)else "${stock.name} · ${decimalLabel(stock.remaining)} ${stock.unit}",colors.onSurface.toArgb())}
+                stocks.take((if(compact)1 else ((height-95)/32).coerceIn(1,5))).forEach {stock->addRow(context,views,if(settings.privateWidgets)context.getString(R.string.widget_hidden)else "${stock.name} · ${decimalLabel(stock.remaining)} ${stock.unit}",colors.onSurface.toArgb())}
             }
             WidgetKind.NEXT -> {
                 views.setTextViewText(R.id.widget_title,if(next==null)context.getString(R.string.widget_no_next) else if(settings.privateWidgets)context.getString(R.string.private_title) else next.name)
-                val dueTime=next?.let {Instant.ofEpochMilli(it.dueAt).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d.MM HH:mm"))}.orEmpty()
-                val timing=if(next?.snoozedUntil!=null)context.getString(R.string.snoozed,dueTime) else dueTime
+                val dueTime=next?.let {Instant.ofEpochMilli(it.dueAt).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(if(compact)"HH:mm" else "d.MM HH:mm"))}.orEmpty()
+                val timing=if(next?.snoozedUntil!=null){if(compact)"↻ $dueTime" else context.getString(R.string.snoozed,dueTime)} else dueTime
                 views.setTextViewText(R.id.widget_body,if(next==null)context.getString(R.string.widget_open) else if(settings.privateWidgets)timing else context.getString(R.string.widget_next_details,next.dose.replace('.',','),next.unit,timing))
+                if(height<128&&next!=null)views.setTextViewText(R.id.widget_title,"$timing · ${if(settings.privateWidgets)context.getString(R.string.widget_hidden) else next.name}")
                 if(next!=null) {
                     views.setViewVisibility(R.id.widget_actions,View.VISIBLE)
                     views.setTextColor(R.id.widget_take,colors.primary.toArgb())
@@ -152,13 +160,13 @@ object WidgetUpdater {
                 }
             }
             WidgetKind.TODAY -> {
-                val limit=if(compact)1 else ((height-110)/48).coerceIn(1,6)
+                val limit=if(compact)1 else ((height-95)/32).coerceIn(1,6)
                 val pending=current.filter {it.state==Occurrence.PENDING&&(activeMedicationIds==null||it.medicationId in activeMedicationIds)}.take(limit)
                 if(pending.isEmpty())views.setTextViewText(R.id.widget_body,context.getString(if(current.isEmpty())R.string.no_doses else R.string.widget_no_next))
                 pending.forEach {row -> addRow(context,views,if(settings.privateWidgets)"${row.time} · ${context.getString(R.string.widget_hidden)}" else context.getString(R.string.widget_pending_row,row.time,row.name,row.dose.replace('.',','),row.unit),colors.onSurface.toArgb())}
             }
             WidgetKind.JOURNAL -> {
-                val limit=if(compact)1 else ((height-110)/48).coerceIn(1,6)
+                val limit=if(compact)1 else ((height-95)/32).coerceIn(1,6)
                 val marked=rows.filter {it.markedAt!=null}.sortedByDescending {it.markedAt}.take(limit)
                 views.setTextViewText(R.id.widget_body,context.getString(if(marked.isEmpty())R.string.widget_no_logs else R.string.last_records))
                 marked.forEach {row ->

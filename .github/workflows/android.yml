@@ -54,6 +54,7 @@ jobs:
           name: Immunoblockers-universal
           path: Immunoblockers-0.4.0-*.apk*
   device-tests:
+    needs: build
     name: Android ${{ matrix.api }} device tests
     strategy:
       fail-fast: false
@@ -71,6 +72,10 @@ jobs:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Immunoblockers-universal
+          path: release-candidate
       - name: Enable KVM
         run: sudo chmod 666 /dev/kvm
       - name: Room, widgets, journal and Compose
@@ -88,11 +93,19 @@ jobs:
             ./gradlew connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true || { cat app/build/outputs/androidTest-results/connected/debug/*.xml; adb logcat -d -s AndroidRuntime; adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots test-screenshots || true; exit 1; }
             mkdir -p test-screenshots
             adb shell am instrument -w -e class com.immunoblockers.ProcessPersistenceTest -e persistence_phase prepare com.immunoblockers.test/androidx.test.runner.AndroidJUnitRunner > test-screenshots/process-prepare.txt
-            rg -q 'OK \(1 test\)' test-screenshots/process-prepare.txt
+            python -c "from pathlib import Path; assert 'OK (1 test)' in Path('test-screenshots/process-prepare.txt').read_text()"
             adb shell am force-stop com.immunoblockers
             adb shell am instrument -w -e class com.immunoblockers.ProcessPersistenceTest -e persistence_phase verify com.immunoblockers.test/androidx.test.runner.AndroidJUnitRunner > test-screenshots/process-verify.txt
-            rg -q 'OK \(1 test\)' test-screenshots/process-verify.txt
+            python -c "from pathlib import Path; assert 'OK (1 test)' in Path('test-screenshots/process-verify.txt').read_text()"
             adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots test-screenshots
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-pass pass:android --key-pass pass:android --out "$RUNNER_TEMP/release-smoke.apk" release-candidate/*.apk
+            adb install -r "$RUNNER_TEMP/release-smoke.apk"
+            adb shell am force-stop com.immunoblockers
+            adb shell am start -W -n com.immunoblockers/.MainActivity > test-screenshots/release-launch.txt
+            python -c "from pathlib import Path; assert 'Status: ok' in Path('test-screenshots/release-launch.txt').read_text()"
+            adb shell pidof com.immunoblockers
+            python -c "import time; time.sleep(1)"
+            adb exec-out screencap -p > test-screenshots/release-home.png
             if [ ${{ matrix.api }} -eq 35 ]; then python tools/record_demo.py; fi
       - uses: actions/upload-artifact@v4
         if: always()

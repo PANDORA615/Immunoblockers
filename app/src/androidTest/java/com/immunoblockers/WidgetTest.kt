@@ -92,33 +92,37 @@ class WidgetTest {
         val manager=AppWidgetManager.getInstance(app)
         val host=AppWidgetHost(app,204)
         val row=Occurrence("host-render","render",1,LocalDate.now().toString(),"23:59",System.currentTimeMillis()+60_000,"Виджет препарат","1.25","мг")
-        for(kind in WidgetKind.entries)for(width in listOf(160,320))for(theme in listOf("light","dark")) {
+        for(kind in WidgetKind.entries)for((width,height) in listOf(160 to 110,160 to 160,320 to 160))for(theme in listOf("light","dark")) {
             val id=host.allocateAppWidgetId()
             try {
                 val options=android.os.Bundle().apply {
                     putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,width)
                     putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH,width)
-                    putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,160)
-                    putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,160)
+                    putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,height)
+                    putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,height)
                 }
                 assertTrue(manager.bindAppWidgetIdIfAllowed(id,ComponentName(app,kind.provider),options))
-                manager.updateAppWidget(id,WidgetUpdater.render(app,kind,listOf(row),ThemeSettings(widgetTheme=theme),height=160,width=width,latest=WellbeingEntry("last",1,"Хорошо","Заметка")))
+                val displayed=if(kind==WidgetKind.JOURNAL||kind==WidgetKind.PROGRESS||kind==WidgetKind.WEEK)listOf(row.copy(state=Occurrence.TAKEN,markedAt=System.currentTimeMillis()),row.copy(id="second",name="Следующий приём")) else listOf(row,row.copy(id="second",name="Следующий приём"))
+                manager.updateAppWidget(id,WidgetUpdater.render(app,kind,displayed,ThemeSettings(widgetTheme=theme),height=height,width=width,latest=WellbeingEntry("last",1,"Хорошо","Заметка")))
                 InstrumentationRegistry.getInstrumentation().runOnMainSync {
                     host.startListening()
                     val view=host.createView(app,id,manager.getAppWidgetInfo(id))
                     val scale=app.resources.displayMetrics.density
-                    val w=(width*scale).toInt();val h=(160*scale).toInt()
+                    val w=(width*scale).toInt();val h=(height*scale).toInt()
                     view.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY))
                     view.layout(0,0,w,h)
                     val bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
                     view.draw(Canvas(bitmap))
                     val folder=File(app.getExternalFilesDir(null),"screenshots").apply {mkdirs()}
-                    File(folder,"host-${kind.name}-$width-$theme.png").outputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
+                    File(folder,"host-${kind.name}-$width-$height-$theme.png").outputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
                     bitmap.recycle()
                     if(kind==WidgetKind.NEXT||kind==WidgetKind.WELLBEING) {
                         val button=view.findViewById<TextView>(R.id.widget_take)
                         assertNotNull(button)
                         assertTrue(button.height>=48*scale-1)
+                        val bounds=android.graphics.Rect()
+                        button.getDrawingRect(bounds);view.offsetDescendantRectToMyCoords(button,bounds)
+                        assertTrue("${kind.name} button clipped at $width x $height: $bounds",bounds.bottom<=view.height)
                     }
                 }
             }finally {host.stopListening();host.deleteAppWidgetId(id)}
