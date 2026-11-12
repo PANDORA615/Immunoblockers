@@ -12,16 +12,18 @@ import com.immunoblockers.ui.*
 
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
+    private var requestedScreen by mutableStateOf<String?>(null)
     private var requestedDose by mutableStateOf<String?>(null)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        requestedScreen = intent.getStringExtra("screen")
         requestedDose = intent.getStringExtra("doseId")
         setContent {
             val settings by vm.settings.collectAsStateWithLifecycle()
-            AppTheme(settings) { AppRoot(vm, requestedDose) { requestedDose = null } }
+            AppTheme(settings) { AppRoot(vm, requestedDose, { requestedDose = null }, requestedScreen) { requestedScreen = null } }
         }
     }
-    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); requestedDose = intent.getStringExtra("doseId") }
+    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); requestedScreen = intent.getStringExtra("screen"); requestedDose = intent.getStringExtra("doseId") }
     override fun onResume() { super.onResume(); vm.refresh() }
 }

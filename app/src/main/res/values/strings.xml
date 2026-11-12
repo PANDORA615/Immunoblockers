@@ -119,7 +119,7 @@
   <string name="privacy">Данные и конфиденциальность</string>
   <string name="privacy_body">Данные хранятся только на этом устройстве. Сетевой доступ, аккаунты и облачные копии не используются. После удаления приложения данные будут потеряны. Immunoblockers хранит введённое расписание и не назначает дозировки.</string>
   <string name="delivery_limits">При выключенном телефоне, принудительной остановке приложения или системных запретах доставка невозможна. Точность также зависит от настроек энергосбережения устройства.</string>
-  <string name="version">Версия 0.1.0 · Android 8.0+</string>
+  <string name="version">Версия 0.2.0 · Android 8.0+</string>
   <string name="notification_test_sent">Тест отправлен; проверьте шторку уведомлений</string>
   <string name="schedule">Расписание</string>
   <string name="medication_history">История лекарства</string>
@@ -146,6 +146,9 @@
   <string-array name="units">
     <item>таблетка</item>
     <item>капсула</item>
+    <item>мг</item>
+    <item>мкг</item>
+    <item>г</item>
     <item>мл</item>
     <item>капля</item>
     <item>другая</item>
@@ -160,4 +163,83 @@
     <item>Вс</item>
   </string-array>
   <string name="completion_count">%1$d / %2$d</string>
+  <string name="control_design">Дизайн элементов</string>
+  <string name="control_design_hint">Оформление полей и выбора меняется во всём приложении.</string>
+  <string name="field_design">Поля ввода</string>
+  <string name="fields_filled">С заливкой</string>
+  <string name="fields_outlined">С обводкой</string>
+  <string name="corner_design">Скругления карточек и полей</string>
+  <string name="corners_rounded">Округлые</string>
+  <string name="corners_soft">Мягкие</string>
+  <string name="corners_square">Чёткие</string>
+  <string name="bold_text">Чуть жирнее шрифт</string>
+  <string name="bold_text_hint">Полужирные заголовки, названия и дозировки; основной текст — средней насыщенности.</string>
+  <string name="dashboard_widgets">Карточки на экране «Сегодня»</string>
+  <string name="block_progress">Прогресс дня</string>
+  <string name="block_next">Ближайшее лекарство</string>
+  <string name="block_journal">Последние отметки</string>
+  <string name="block_chart">График за неделю</string>
+  <string name="dashboard_hint">Включите только нужные карточки. Список приёмов остаётся ниже.</string>
+  <string name="launcher_widgets">Виджеты рабочего стола</string>
+  <string name="widget_next_name">Ближайший приём</string>
+  <string name="widget_today_name">Расписание на сегодня</string>
+  <string name="widget_journal_name">Журнал приёмов</string>
+  <string name="widget_next_description">Название, дозировка и быстрые действия «Принять» и «10 мин».</string>
+  <string name="widget_today_description">Прогресс дня и ближайшие запланированные приёмы.</string>
+  <string name="widget_journal_description">Последние отметки с лекарством, дозировкой и временем.</string>
+  <string name="add_widget">Добавить виджет</string>
+  <string name="widget_add_manual">Откройте выбор виджетов на рабочем столе и найдите Immunoblockers.</string>
+  <string name="private_widgets">Скрыть лекарства в виджетах</string>
+  <string name="private_widgets_hint">Названия и дозировки видны только внутри приложения.</string>
+  <string name="widget_hidden">Запись скрыта</string>
+  <string name="widget_open">Открыть приложение</string>
+  <string name="widget_no_next">На сегодня всё отмечено</string>
+  <string name="widget_no_logs">Отметок пока нет</string>
+  <string name="widget_day_counts">Принято %1$d из %2$d · пропущено %3$d</string>
+  <string name="widget_ten_minutes">10 мин</string>
+  <string name="widget_row">%1$s · %2$s %3$s\n%4$s · %5$s</string>
+  <string name="widget_pending_row">%1$s · %2$s\n%3$s %4$s</string>
+  <string name="journal_title">График и журнал</string>
+  <string name="intake_chart">График приёмов</string>
+  <string name="chart_hint">По датам расписания. Нажмите на день, чтобы посмотреть его записи. Фактическое время указано в журнале.</string>
+  <string name="chart_swipe">Прокрутите график, чтобы увидеть остальные дни.</string>
+  <string name="period_week">7 дней</string>
+  <string name="period_month">30 дней</string>
+  <string name="period_all">Всё время</string>
+  <string name="chart_day_accessibility">%1$s. Всего: %2$d, принято: %3$d, пропущено: %4$d, без отметки: %5$d, ожидает: %6$d</string>
+  <string name="total_taken">Принято</string>
+  <string name="total_skipped">Пропущено</string>
+  <string name="total_unmarked">Без отметки</string>
+  <string name="medicine_totals">Сколько принято</string>
+  <string name="medicine_totals_hint">Суммы только по подтверждённым приёмам; лекарства и единицы считаются отдельно.</string>
+  <string name="total_medication">Приёмов: %1$d · всего %2$s %3$s</string>
+  <string name="amount_unknown">Не удалось рассчитать сумму</string>
+  <string name="journal_records">Записи приёмов</string>
+  <string name="journal_compact">Компактно</string>
+  <string name="journal_detailed">Подробно</string>
+  <string name="actual_taken">Принято в %1$s</string>
+  <string name="actual_skipped">Пропуск отмечен в %1$s</string>
+  <string name="dose_per_intake">Дозировка за приём</string>
+  <string name="show_all_days">Все дни периода</string>
+  <string name="last_records">Последние отметки</string>
+  <string name="next_medication">Далее по расписанию</string>
+  <string name="journal_empty">Пока нет отметок о приёме</string>
+  <string name="journal_empty_hint">Отметьте лекарство как принятое: здесь появятся его название, дозировка и фактическое время.</string>
+  <string name="custom_unit">Своя единица</string>
+  <string name="invalid_unit">Укажите единицу дозировки</string>
+  <string name="medication_information">О лекарстве</string>
+  <string name="medication_information_hint">Введите именно ту разовую дозу, которая указана в вашем расписании.</string>
+  <string name="course_settings">Период курса</string>
+  <string name="schedule_settings">Дни и время</string>
+  <string name="pick_date">Выбрать дату</string>
+  <string name="pick_time">Выбрать время</string>
+  <string name="enter_time">Ввести время</string>
+  <string name="clock_time">Циферблат</string>
+  <string name="input_preview">Пример поля</string>
+  <string name="input_preview_hint">Можно ввести текст и посмотреть, как выглядит выбранный дизайн.</string>
+  <string name="chart_empty">За этот период приёмов нет</string>
+  <string name="journal_period">Период расписания: %1$s — %2$s</string>
+  <string name="log_time_missing">Время отметки не сохранено</string>
+  <string name="widget_next_details">%1$s %2$s · %3$s</string>
+  <string name="chart_range">На графике: %1$s — %2$s</string>
 </resources>

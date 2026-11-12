@@ -22,13 +22,19 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 
 @Composable
-fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit) {
+fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit, requestedScreen: String? = null, consumeScreen: () -> Unit = {}) {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.refresh() }
     LaunchedEffect(Unit) { while(true) { delay(60_000); vm.refresh() } }
     val meds by vm.medications.collectAsStateWithLifecycle()
     val rows by vm.occurrences.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val nav = rememberNavController()
+    LaunchedEffect(requestedScreen) {
+        if(requestedScreen in listOf("today","history")) {
+            nav.navigate(requestedScreen!!) { popUpTo(nav.graph.startDestinationId) {saveState=true};launchSingleTop=true;restoreState=true }
+            consumeScreen()
+        }
+    }
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route ?: "today"
     val snack = remember { SnackbarHostState() }
@@ -61,7 +67,7 @@ fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit) {
         NavHost(nav, "today", modifier=Modifier.padding(padding), enterTransition={ fadeIn(tween(duration)) }, exitTransition={ fadeOut(tween(duration)) }) {
             composable("today") { TodayScreen(rows, meds, vm, {nav.navigate("edit/new")}, {selected=it.id}) }
             composable("medications") { MedicationsScreen(meds, {nav.navigate("detail/${it.id}")}) }
-            composable("history") { HistoryScreen(rows, meds, onRow={selected=it.id}) }
+            composable("history") { JournalScreen(rows, meds, vm, onRow={selected=it.id}) }
             composable("settings") { SettingsScreen(settings, vm) }
             composable("edit/{id}") { back ->
                 val id = back.arguments?.getString("id")

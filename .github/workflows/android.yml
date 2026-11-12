@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish v0.1.0 preview release
+        description: Publish v0.2.0 preview release
         type: boolean
         default: false
 permissions:
@@ -39,19 +39,24 @@ jobs:
           fi
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease assembleDebugAndroidTest
       - name: Prepare universal APK
-        run: cp app/build/outputs/apk/release/app-release.apk Immunoblockers-0.1.0-universal.apk
+        run: cp app/build/outputs/apk/release/app-release.apk Immunoblockers-0.2.0-universal.apk
       - uses: actions/upload-artifact@v4
         with:
           name: Immunoblockers-universal
-          path: Immunoblockers-0.1.0-universal.apk
+          path: Immunoblockers-0.2.0-universal.apk
       - name: Publish preview
         if: github.event_name == 'workflow_dispatch' && inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           test -n "$IMMUNOBLOCKERS_KEYSTORE"
-          gh release create v0.1.0 Immunoblockers-0.1.0-universal.apk --target "$GITHUB_SHA" --title 'Immunoblockers 0.1.0 — Android preview' --notes-file docs/RELEASE.md
+          gh release create v0.2.0 Immunoblockers-0.2.0-universal.apk --target "$GITHUB_SHA" --title 'Immunoblockers 0.2.0 — Android preview' --notes-file docs/RELEASE.md
   device-tests:
+    name: Android ${{ matrix.api }} device tests
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [26, 35]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,20 +71,27 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Enable KVM
         run: sudo chmod 666 /dev/kvm
-      - name: Room, notifications and Compose on Android 15
+      - name: Room, widgets, journal and Compose
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: ${{ matrix.api }}
           arch: x86_64
           profile: pixel_2
           disable-animations: true
           script: |
             ./gradlew installDebug installDebugAndroidTest
-            adb shell pm grant com.immunoblockers android.permission.POST_NOTIFICATIONS
-            adb shell appops set com.immunoblockers SCHEDULE_EXACT_ALARM allow
-            ./gradlew connectedDebugAndroidTest || { cat app/build/outputs/androidTest-results/connected/debug/*.xml; adb logcat -d -s AndroidRuntime; exit 1; }
+            if [ ${{ matrix.api }} -ge 33 ]; then adb shell pm grant com.immunoblockers android.permission.POST_NOTIFICATIONS; fi
+            if [ ${{ matrix.api }} -ge 31 ]; then adb shell appops set com.immunoblockers SCHEDULE_EXACT_ALARM allow; fi
+            adb shell appwidget grantbind --package com.immunoblockers --user 0
+            ./gradlew connectedDebugAndroidTest || { cat app/build/outputs/androidTest-results/connected/debug/*.xml; adb logcat -d -s AndroidRuntime; adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots .screenshots || true; exit 1; }
+            adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots .screenshots
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Android-device-test-reports
+          name: Android-device-test-reports-${{ matrix.api }}
           path: app/build/reports/androidTests/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Android-screenshots-${{ matrix.api }}
+          path: .screenshots/

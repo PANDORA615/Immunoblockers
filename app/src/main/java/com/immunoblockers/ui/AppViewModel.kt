@@ -29,6 +29,6 @@ class AppViewModel(application: Application): AndroidViewModel(application) {
     }
     fun undo(row: DoseChange) = work { app.repository.undo(row); app.reminders.reconcileAndSchedule() }
     fun snooze(row: Occurrence, minutes: Int) = work { app.repository.snooze(row.id, minutes); app.reminders.cancel(row.id); app.reminders.reconcileAndSchedule(); events.send(UiEvent.Snoozed) }
-    fun settings(value: ThemeSettings) = work { app.settings.save(value); app.reminders.reconcileAndSchedule() }
+    fun settings(transform: (ThemeSettings) -> ThemeSettings) = work { app.settings.update(transform); app.reminders.reconcileAndSchedule() }
     fun testNotification() = work { app.reminders.test() }
 }

@@ -6,6 +6,9 @@ import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
@@ -65,5 +68,26 @@ fun AppTheme(settings: ThemeSettings, content: @Composable () -> Unit) {
             }
         }
     }
-    CompositionLocalProvider(LocalReducedMotion provides settings.reducedMotion) { MaterialTheme(colorScheme=animated, content=content) }
+    val typography=remember(settings.boldText) {
+        val t=Typography()
+        if(!settings.boldText)t else t.copy(
+            headlineLarge=t.headlineLarge.copy(fontWeight=FontWeight.SemiBold),
+            headlineMedium=t.headlineMedium.copy(fontWeight=FontWeight.SemiBold),
+            headlineSmall=t.headlineSmall.copy(fontWeight=FontWeight.SemiBold),
+            titleLarge=t.titleLarge.copy(fontWeight=FontWeight.SemiBold),
+            titleMedium=t.titleMedium.copy(fontWeight=FontWeight.SemiBold),
+            titleSmall=t.titleSmall.copy(fontWeight=FontWeight.SemiBold),
+            bodyLarge=t.bodyLarge.copy(fontWeight=FontWeight.Medium),
+            bodyMedium=t.bodyMedium.copy(fontWeight=FontWeight.Medium),
+            labelLarge=t.labelLarge.copy(fontWeight=FontWeight.SemiBold),
+            displayMedium=t.displayMedium.copy(fontWeight=FontWeight.SemiBold))
+    }
+    val shapes=remember(settings.corners) {
+        val radius=when(settings.corners){"square"->4;"soft"->12;else->24}
+        Shapes(extraSmall=RoundedCornerShape((radius/2).dp),small=RoundedCornerShape(radius.dp),
+            medium=RoundedCornerShape(radius.dp),large=RoundedCornerShape(radius.dp),extraLarge=RoundedCornerShape((radius+4).dp))
+    }
+    CompositionLocalProvider(LocalReducedMotion provides settings.reducedMotion, LocalAppearance provides settings) {
+        MaterialTheme(colorScheme=animated, typography=typography, shapes=shapes, content=content)
+    }
 }

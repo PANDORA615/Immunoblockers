@@ -2,6 +2,15 @@
 package com.immunoblockers.ui
 
 import android.Manifest
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import com.immunoblockers.widgets.WidgetKind
+import com.immunoblockers.widgets.WidgetUpdater
+import android.os.Bundle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.platform.testTag
 import android.app.AlarmManager
 import android.content.Intent
 import android.graphics.Color as AndroidColor
@@ -65,27 +74,77 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
     var hex by rememberSaveable(s.seed){mutableStateOf("#%06X".format(s.seed and 0xFFFFFF))}
     var hue by rememberSaveable {mutableFloatStateOf(150f)}
     val valid=hex.matches(Regex("#[0-9a-fA-F]{6}"))
-    LazyColumn(contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    LazyColumn(modifier=Modifier.testTag("settingsList"),contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=32.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item {PageHeading(stringResource(R.string.settings));SectionTitle(R.string.appearance)}
-        item {Text(stringResource(R.string.theme));FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("system" to R.string.system,"light" to R.string.light,"dark" to R.string.dark).forEach {(value,label)->FilterChip(s.theme==value,{vm.settings(s.copy(theme=value))},label={Text(stringResource(label))})}}}
-        item {Text(stringResource(R.string.palette));FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("default" to R.string.default_palette,"dynamic" to R.string.dynamic_palette,"custom" to R.string.custom_palette).forEach {(value,label)->FilterChip(s.palette==value,{vm.settings(s.copy(palette=value))},label={Text(stringResource(label))})}}}
+        item {Text(stringResource(R.string.theme),style=MaterialTheme.typography.titleSmall);DesignChoices(s.theme,listOf("system" to R.string.system,"light" to R.string.light,"dark" to R.string.dark)){value->vm.settings {it.copy(theme=value)}}}
+        item {Text(stringResource(R.string.palette),style=MaterialTheme.typography.titleSmall);DesignChoices(s.palette,listOf("default" to R.string.default_palette,"dynamic" to R.string.dynamic_palette,"custom" to R.string.custom_palette)){value->vm.settings {it.copy(palette=value)}}}
         if(s.palette=="custom") {
-            item {FlowRow(horizontalArrangement=Arrangement.spacedBy(4.dp)){listOf(0xFF146B55,0xFF5264AD,0xFF8B4587,0xFFB55C32,0xFF406980,0xFF665D34).forEach {seed->val label=stringResource(R.string.color_sample,"#%06X".format(seed and 0xFFFFFF));IconButton(onClick={vm.settings(s.copy(seed=seed))},modifier=Modifier.size(52.dp).semantics{contentDescription=label}){Box(Modifier.size(32.dp).background(Color(seed),CircleShape))}}}}
-            item {OutlinedTextField(hex,{hex=it},label={Text(stringResource(R.string.hex))},isError=!valid,supportingText={if(!valid)Text(stringResource(R.string.invalid_hex))},singleLine=true,modifier=Modifier.fillMaxWidth());Button(onClick={vm.settings(s.copy(seed=0xFF000000 or hex.drop(1).toLong(16)))},enabled=valid){Text(stringResource(R.string.apply_color))}}
-            item {Text(stringResource(R.string.hue));Slider(hue,{hue=it;hex="#%06X".format(AndroidColor.HSVToColor(floatArrayOf(it,0.6f,0.7f)) and 0xFFFFFF)},valueRange=0f..360f)}
+            item {FlowRow(horizontalArrangement=Arrangement.spacedBy(4.dp)){listOf(0xFF146B55,0xFF5264AD,0xFF8B4587,0xFFB55C32,0xFF406980,0xFF665D34).forEach {seed->val label=stringResource(R.string.color_sample,"#%06X".format(seed and 0xFFFFFF));IconButton(onClick={vm.settings {it.copy(seed=seed)}},modifier=Modifier.size(52.dp).semantics{contentDescription=label}){Box(Modifier.size(32.dp).background(Color(seed),CircleShape))}}}}
+            item {AppTextField(hex,{hex=it},label={Text(stringResource(R.string.hex))},isError=!valid,supportingText={if(!valid)Text(stringResource(R.string.invalid_hex))},singleLine=true,modifier=Modifier.fillMaxWidth());Button(onClick={val seed=0xFF000000 or hex.drop(1).toLong(16);vm.settings {it.copy(seed=seed)}},enabled=valid){Text(stringResource(R.string.apply_color))}}
+            item {val label=stringResource(R.string.hue);Text(label);Slider(hue,{hue=it;hex="#%06X".format(AndroidColor.HSVToColor(floatArrayOf(it,0.6f,0.7f)) and 0xFFFFFF)},valueRange=0f..360f,modifier=Modifier.semantics{contentDescription=label})}
             item {Text(stringResource(R.string.preview),style=MaterialTheme.typography.titleMedium)}
             item {FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {listOf(false,true).forEach {dark->PalettePreview(s.seed,dark)}}}
         }
-        item {SettingSwitch(R.string.reduced_motion,R.string.reduced_motion_body,s.reducedMotion){vm.settings(s.copy(reducedMotion=it))}}
+        item {HorizontalDivider();SectionTitle(R.string.control_design);Text(stringResource(R.string.control_design_hint),style=MaterialTheme.typography.bodyMedium)}
+        item {Text(stringResource(R.string.field_design),style=MaterialTheme.typography.titleSmall);DesignChoices(s.fieldStyle,listOf("filled" to R.string.fields_filled,"outlined" to R.string.fields_outlined)){value->vm.settings {it.copy(fieldStyle=value)}}}
+        item {Text(stringResource(R.string.corner_design),style=MaterialTheme.typography.titleSmall);DesignChoices(s.corners,listOf("rounded" to R.string.corners_rounded,"soft" to R.string.corners_soft,"square" to R.string.corners_square)){value->vm.settings {it.copy(corners=value)}}}
+        item {SettingSwitch(R.string.bold_text,R.string.bold_text_hint,s.boldText){value->vm.settings {it.copy(boldText=value)}}}
+        item {var preview by rememberSaveable {mutableStateOf("")};AppTextField(preview,{preview=it},label={Text(stringResource(R.string.input_preview))},supportingText={Text(stringResource(R.string.input_preview_hint))},modifier=Modifier.fillMaxWidth())}
+        item {SettingSwitch(R.string.reduced_motion,R.string.reduced_motion_body,s.reducedMotion){value->vm.settings {it.copy(reducedMotion=value)}}}
+        item {HorizontalDivider();SectionTitle(R.string.dashboard_widgets);Text(stringResource(R.string.dashboard_hint),style=MaterialTheme.typography.bodySmall)}
+        listOf("progress" to R.string.block_progress,"next" to R.string.block_next,"journal" to R.string.block_journal,"chart" to R.string.block_chart).forEach {(block,title)->
+            item {SettingSwitch(title,value=block in s.todayBlocks.split(',')){enabled->vm.settings {current->
+                val chosen=current.todayBlocks.split(',').filter {it.isNotBlank()}.toMutableSet()
+                if(enabled)chosen.add(block) else chosen.remove(block)
+                current.copy(todayBlocks=chosen.joinToString(","))
+            }}}
+        }
+        item {HorizontalDivider();SectionTitle(R.string.launcher_widgets)}
+        item {WidgetGallery(vm)}
+        item {SettingSwitch(R.string.private_widgets,R.string.private_widgets_hint,s.privateWidgets){value->vm.settings {it.copy(privateWidgets=value)}}}
         item {HorizontalDivider();SectionTitle(R.string.notifications)}
         item {PermissionStatus(vm)}
-        item {SettingSwitch(R.string.enable_reminders,value=s.reminders){vm.settings(s.copy(reminders=it))}}
-        item {SettingSwitch(R.string.privacy_notifications,R.string.privacy_notifications_body,s.privateNotifications){vm.settings(s.copy(privateNotifications=it))}}
+        item {SettingSwitch(R.string.enable_reminders,value=s.reminders){value->vm.settings {it.copy(reminders=value)}}}
+        item {SettingSwitch(R.string.privacy_notifications,R.string.privacy_notifications_body,s.privateNotifications){value->vm.settings {it.copy(privateNotifications=value)}}}
         item {OutlinedButton(onClick={if(vm.app.reminders.notificationsAvailable())vm.testNotification() else notificationSettings(context)},modifier=Modifier.fillMaxWidth()){Icon(Icons.Outlined.NotificationsActive,null);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.test_notification))}}
         item {Text(stringResource(R.string.delivery_limits),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
         item {HorizontalDivider();SectionTitle(R.string.privacy);Text(stringResource(R.string.privacy_body),style=MaterialTheme.typography.bodyMedium)}
         item {Text(stringResource(R.string.app_name),style=MaterialTheme.typography.titleMedium,modifier=Modifier.padding(top=20.dp));Text(stringResource(R.string.version),style=MaterialTheme.typography.bodySmall)}
     }
+}
+
+@Composable fun DesignChoices(selected:String,choices:List<Pair<String,Int>>,choose:(String)->Unit) {
+    FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        choices.forEach {(value,label)->FilterChip(selected==value,{choose(value)},label={Text(stringResource(label))},leadingIcon=if(selected==value){{Icon(Icons.Outlined.Check,null,Modifier.size(18.dp))}}else null)}
+    }
+}
+
+@Composable fun WidgetGallery(vm: AppViewModel) {
+    val scope=rememberCoroutineScope()
+    val appearance=LocalAppearance.current
+    val context=LocalContext.current
+    var manual by remember {mutableStateOf(false)}
+    Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        WidgetKind.entries.forEach {kind->Card {
+            Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Outlined.Widgets,null,tint=MaterialTheme.colorScheme.primary)
+                Text(stringResource(kind.title),style=MaterialTheme.typography.titleMedium)
+                Text(stringResource(kind.description),style=MaterialTheme.typography.bodyMedium)
+                FilledTonalButton(onClick={
+                    val manager=AppWidgetManager.getInstance(context)
+                    if(!manager.isRequestPinAppWidgetSupported)manual=true
+                    else scope.launch(Dispatchers.IO) {
+                        val preview=WidgetUpdater.render(context,kind,vm.app.repository.dao.occurrences(),appearance)
+                        withContext(Dispatchers.Main) {
+                            val extras=Bundle().apply {putParcelable(AppWidgetManager.EXTRA_APPWIDGET_PREVIEW,preview)}
+                            if(!manager.requestPinAppWidget(ComponentName(context,kind.provider),extras,null))manual=true
+                        }
+                    }
+                }){Icon(Icons.Outlined.Add,null);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.add_widget))}
+            }
+        }}
+    }
+    if(manual)AlertDialog(onDismissRequest={manual=false},title={Text(stringResource(R.string.launcher_widgets))},text={Text(stringResource(R.string.widget_add_manual))},confirmButton={TextButton(onClick={manual=false}){Text(stringResource(R.string.close))}})
 }
 @Composable fun PalettePreview(seed:Long,dark:Boolean) {
     val scheme by produceState(if(dark)darkColorScheme() else lightColorScheme(),seed,dark){value=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default){seedScheme(seed,dark)}}

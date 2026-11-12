@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,6 +45,7 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
     }
 }
 @Composable fun TodayScreen(rows: List<Occurrence>, meds: List<Medication>, vm: AppViewModel, add: () -> Unit, onRow:(Occurrence)->Unit) {
+    val blocks=LocalAppearance.current.todayBlocks.split(',').toSet()
     val today = LocalDate.now()
     val doses = rows.filter {it.date==today.toString()}.sortedBy {it.time}
     val taken = doses.count {it.state==Occurrence.TAKEN}
@@ -53,7 +55,7 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
         item { PageHeading(stringResource(R.string.today))
             Text(stringResource(R.string.today_label,today.format(DateTimeFormatter.ofPattern("d MMMM, EEEE",ru))),color=MaterialTheme.colorScheme.onSurfaceVariant) }
         item { PermissionStatus(vm, compact=true) }
-        if(doses.isNotEmpty()) item {
+        if(doses.isNotEmpty() && "progress" in blocks) item {
             Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.primaryContainer)) {
                 Column(Modifier.fillMaxWidth().padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     Text(stringResource(R.string.day_progress),style=MaterialTheme.typography.titleMedium)
@@ -67,6 +69,7 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
         if(meds.none {!it.archived}) item { EmptyState(R.string.no_medications,R.string.no_medications_body) { Button(onClick=add){Text(stringResource(R.string.add_medication))} } }
         else if(doses.isEmpty()) item {EmptyState(R.string.no_doses,R.string.no_doses_body)}
         else if(taken+skipped==doses.size) item {EmptyState(R.string.all_done,R.string.all_done_body)}
+        item {TodayHighlights(rows,blocks,onRow)}
         doses.groupBy {it.time}.forEach { (time, group) ->
             item(key="time$time") {Text(time,style=MaterialTheme.typography.titleMedium,modifier=Modifier.padding(top=12.dp))}
             items(group,key={it.id}) {row -> DoseCard(row,{onRow(row)},{vm.mark(row,Occurrence.TAKEN)})}
@@ -101,7 +104,7 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
     val filtered=meds.filter {it.archived==archive && it.name.contains(query,true)}
     LazyColumn(contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=100.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {PageHeading(stringResource(R.string.medications))}
-        item {OutlinedTextField(query,{query=it},label={Text(stringResource(R.string.search))},leadingIcon={Icon(Icons.Outlined.Search,null)},modifier=Modifier.fillMaxWidth(),singleLine=true)}
+        item {AppTextField(query,{query=it},label={Text(stringResource(R.string.search))},leadingIcon={Icon(Icons.Outlined.Search,null)},modifier=Modifier.fillMaxWidth(),singleLine=true)}
         item {Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {FilterChip(!archive,{archive=false},label={Text(stringResource(R.string.active))});FilterChip(archive,{archive=true},label={Text(stringResource(R.string.archive))})}}
         if(filtered.isEmpty()) item {EmptyState(if(query.isEmpty()) R.string.no_medications else R.string.empty_search)}
         items(filtered,key={it.id}) {med -> Card(onClick={open(med)},modifier=Modifier.fillMaxWidth()) {
@@ -117,7 +120,7 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
 @Composable fun MedicationDetails(med: Medication, rows: List<Occurrence>, vm:AppViewModel, back:()->Unit, edit:()->Unit, onRow:(Occurrence)->Unit) {
     var confirm by remember {mutableStateOf(false)}
     Column {
-        TopAppBar(title={Text(stringResource(R.string.details))},navigationIcon={IconButton(back){Icon(Icons.Outlined.ArrowBack,stringResource(R.string.back))}},actions={IconButton(edit){Icon(Icons.Outlined.Edit,stringResource(R.string.edit))}})
+        TopAppBar(title={Text(stringResource(R.string.details))},navigationIcon={IconButton(back){Icon(Icons.AutoMirrored.Outlined.ArrowBack,stringResource(R.string.back))}},actions={IconButton(edit){Icon(Icons.Outlined.Edit,stringResource(R.string.edit))}})
         LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             item {Text(med.name,style=MaterialTheme.typography.headlineLarge);Text(stringResource(R.string.details_dose,med.dose,med.unit),style=MaterialTheme.typography.titleLarge)}
             item {Text(scheduleSummary(med));Text(stringResource(R.string.course,displayDate(med.start),med.end?.let(::displayDate) ?: stringResource(R.string.indefinite)),modifier=Modifier.padding(top=8.dp));if(med.note.isNotBlank())Text(med.note,modifier=Modifier.padding(top=12.dp))}
@@ -135,32 +138,4 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
     var expanded by remember {mutableStateOf(false)}
     Box {OutlinedButton(onClick={expanded=true}){Text(label);Icon(Icons.Outlined.ExpandMore,null)};DropdownMenu(expanded,{expanded=false}){choices.forEach {(id,title)->DropdownMenuItem(text={Text(title)},onClick={select(id);expanded=false})}}}
 }
-@Composable fun HistoryScreen(rows:List<Occurrence>,meds:List<Medication>,onRow:(Occurrence)->Unit) {
-    var date by rememberSaveable {mutableStateOf<String?>(null)}
-    var med by rememberSaveable {mutableStateOf("")}
-    var state by rememberSaveable {mutableStateOf("")}
-    val context=LocalContext.current
-    val states=listOf("" to stringResource(R.string.all_states),Occurrence.TAKEN to stringResource(R.string.taken),Occurrence.SKIPPED to stringResource(R.string.skipped),Occurrence.PENDING to stringResource(R.string.unmarked))
-    val choices=listOf("" to stringResource(R.string.all_medications))+meds.map {it.id to it.name}
-    val filtered=rows.filter {it.date<=LocalDate.now().toString() && (date==null||it.date==date) && (med.isEmpty()||it.medicationId==med) && (state.isEmpty()||it.state==state) && (state!=Occurrence.PENDING||it.date<LocalDate.now().toString())}
-    LazyColumn(contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item {PageHeading(stringResource(R.string.history))}
-        item {FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick={val d=date?.let(LocalDate::parse)?:LocalDate.now();DatePickerDialog(context,{_,y,m,day->date=LocalDate.of(y,m+1,day).toString()},d.year,d.monthValue-1,d.dayOfMonth).show()}){Icon(Icons.Outlined.CalendarMonth,null);Spacer(Modifier.width(8.dp));Text(date?.let(::displayDate)?:stringResource(R.string.all_dates))}
-            if(date!=null)TextButton(onClick={date=null}){Text(stringResource(R.string.clear_date))}
-            FilterMenu(choices.firstOrNull {it.first==med}?.second?:stringResource(R.string.all_medications),choices){med=it}
-            FilterMenu(states.first {it.first==state}.second,states){state=it}
-        }}
-        if(filtered.isEmpty()) item {EmptyState(R.string.empty_history,R.string.empty_history_body)}
-        filtered.groupBy {it.date}.forEach {(d,group)->item(key=d){Text(displayDate(d),style=MaterialTheme.typography.titleMedium,modifier=Modifier.padding(top=12.dp))};items(group,key={it.id}){row->HistoryRow(row){onRow(row)}}}
-    }
-}
-@Composable fun HistoryRow(row:Occurrence,open:()->Unit) {
-    Card(onClick=open,modifier=Modifier.fillMaxWidth()) {Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-        Text(row.name,style=MaterialTheme.typography.titleMedium)
-        Text(stringResource(R.string.details_dose,row.dose,row.unit))
-        Text(stringResource(R.string.scheduled,"${row.date} ${row.time}"),style=MaterialTheme.typography.bodySmall)
-        row.markedAt?.let {Text(stringResource(R.string.marked,displayInstant(it)),style=MaterialTheme.typography.bodySmall)}
-        Text(stateText(row),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary)
-    }}
-}
+@Composable fun HistoryRow(row:Occurrence,open:()->Unit) { JournalEntry(row,open=open) }

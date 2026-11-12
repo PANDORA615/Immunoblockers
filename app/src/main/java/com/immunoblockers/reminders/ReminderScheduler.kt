@@ -11,6 +11,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.immunoblockers.*
 import com.immunoblockers.data.*
+import com.immunoblockers.widgets.WidgetUpdater
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -36,6 +37,7 @@ class ReminderScheduler(private val context: Context, private val repo: Reposito
     suspend fun reconcileAndSchedule() = mutex.withLock {
         repo.reconcile()
         scheduleLocked()
+        WidgetUpdater.updateAll(context, repo.dao.occurrences(), settings.flow.first())
     }
     private suspend fun scheduleLocked() {
         val all = repo.dao.occurrences()
