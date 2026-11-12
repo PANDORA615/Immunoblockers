@@ -107,7 +107,7 @@ object WidgetUpdater {
             }
             WidgetKind.WELLBEING -> {
                 views.setTextViewText(R.id.widget_title,if(settings.privateWidgets)context.getString(R.string.widget_hidden) else latest?.mood?:"Самочувствие")
-                views.setTextViewText(R.id.widget_body,if(settings.privateWidgets)"Откройте приложение" else latest?.let {if(compact)it.text.take(80) else it.text.take(240)}?:"Записей пока нет")
+                views.setTextViewText(R.id.widget_body,if(settings.privateWidgets)"Откройте приложение" else latest?.let { val date=Instant.ofEpochMilli(it.recordedAt).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d.MM HH:mm")); if(compact)it.text.take(80).ifBlank {date} else "${it.text.take(180)} · $date" }?:"Записей пока нет")
                 views.setViewVisibility(R.id.widget_actions,View.VISIBLE)
                 views.setViewVisibility(R.id.widget_snooze,View.GONE)
                 views.setTextViewText(R.id.widget_take,"Добавить")
@@ -135,7 +135,7 @@ object WidgetUpdater {
                 val stocks=LocalBook(context).stocks(rows)
                 views.setTextViewText(R.id.widget_title,context.getString(R.string.tools_stock))
                 views.setTextViewText(R.id.widget_body,context.getString(if(stocks.isEmpty())R.string.stock_empty else R.string.stock_hint))
-                stocks.take((if(compact)1 else ((height-80)/40).coerceIn(1,5))).forEach {stock->addRow(context,views,if(settings.privateWidgets)context.getString(R.string.widget_hidden)else "${stock.name} · ${decimalLabel(stock.remaining)} ${stock.unit}",colors.onSurface.toArgb())}
+                stocks.take((if(compact)1 else ((height-110)/48).coerceIn(1,5))).forEach {stock->addRow(context,views,if(settings.privateWidgets)context.getString(R.string.widget_hidden)else "${stock.name} · ${decimalLabel(stock.remaining)} ${stock.unit}",colors.onSurface.toArgb())}
             }
             WidgetKind.NEXT -> {
                 views.setTextViewText(R.id.widget_title,if(next==null)context.getString(R.string.widget_no_next) else if(settings.privateWidgets)context.getString(R.string.private_title) else next.name)
@@ -152,13 +152,13 @@ object WidgetUpdater {
                 }
             }
             WidgetKind.TODAY -> {
-                val limit=if(compact)1 else ((height-80)/40).coerceIn(1,6)
+                val limit=if(compact)1 else ((height-110)/48).coerceIn(1,6)
                 val pending=current.filter {it.state==Occurrence.PENDING&&(activeMedicationIds==null||it.medicationId in activeMedicationIds)}.take(limit)
                 if(pending.isEmpty())views.setTextViewText(R.id.widget_body,context.getString(if(current.isEmpty())R.string.no_doses else R.string.widget_no_next))
                 pending.forEach {row -> addRow(context,views,if(settings.privateWidgets)"${row.time} · ${context.getString(R.string.widget_hidden)}" else context.getString(R.string.widget_pending_row,row.time,row.name,row.dose.replace('.',','),row.unit),colors.onSurface.toArgb())}
             }
             WidgetKind.JOURNAL -> {
-                val limit=if(compact)1 else ((height-80)/40).coerceIn(1,6)
+                val limit=if(compact)1 else ((height-110)/48).coerceIn(1,6)
                 val marked=rows.filter {it.markedAt!=null}.sortedByDescending {it.markedAt}.take(limit)
                 views.setTextViewText(R.id.widget_body,context.getString(if(marked.isEmpty())R.string.widget_no_logs else R.string.last_records))
                 marked.forEach {row ->

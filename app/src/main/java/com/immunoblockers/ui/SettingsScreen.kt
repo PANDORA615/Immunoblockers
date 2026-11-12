@@ -76,7 +76,7 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
     val imageScope=rememberCoroutineScope()
     var imageError by remember {mutableStateOf(false)}
     val widgetPicker=rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()){uri->if(uri!=null)imageScope.launch {
-        try {val path=copyLocalImage(context,uri);vm.settings {it.copy(widgetImage=path)};imageError=false}catch(_:Exception){imageError=true}
+        try {val path=copyLocalImage(context,uri);storeLocalImage(vm,path,false);vm.refresh();imageError=false}catch(_:Exception){imageError=true}
     }}
     val valid=hex.matches(Regex("#[0-9a-fA-F]{6}"))
     LazyColumn(modifier=Modifier.testTag("settingsList"),contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=32.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -119,7 +119,7 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
             Slider(s.widgetOpacity.toFloat(),{value->vm.settings {it.copy(widgetOpacity=value.toInt())}},valueRange=40f..255f)
             FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {listOf("system" to "Как в приложении","light" to "Светлый","dark" to "Тёмный").forEach {(key,label)->FilterChip(s.widgetTheme==key,{vm.settings {it.copy(widgetTheme=key)}},label={Text(label)})}}
             OutlinedButton(onClick={widgetPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}){Text("Выбрать подложку")}
-            if(s.widgetImage.isNotBlank())TextButton(onClick={vm.settings {it.copy(widgetImage="")}}){Text("Удалить подложку")}
+            if(s.widgetImage.isNotBlank())TextButton(onClick={imageScope.launch {storeLocalImage(vm,"",false);vm.refresh()}}){Text("Удалить подложку")}
             Text("Выбранное изображение копируется в закрытое хранилище и размывается. Живые обои Android не используются.",style=MaterialTheme.typography.bodySmall)
             if(imageError)Text("Не удалось открыть изображение")
         }

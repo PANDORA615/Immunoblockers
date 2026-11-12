@@ -50,7 +50,7 @@ class Repository(val db: AppDatabase, private val preferences:suspend ()->ThemeS
             val before = dao.occurrence(id) ?: return@withTransaction null
             if (dao.mark(id, state, now) == 0) null else {
                 val settings=preferences()
-                if(state==Occurrence.TAKEN && settings.askWellbeing) {
+                if(state==Occurrence.TAKEN && settings.askWellbeing && db.wellbeing().membership(id)==null) {
                     val journal=db.wellbeing()
                     val group=journal.groups().filter {it.status=="pending" && now>=it.firstAt && now-it.firstAt<=30*60_000L}.maxByOrNull {it.firstAt}
                         ?: SurveyGroup(java.util.UUID.randomUUID().toString(),now,now+settings.surveyHours.coerceIn(1,6)*3_600_000L).also {journal.saveGroup(it)}
@@ -96,15 +96,16 @@ class Repository(val db: AppDatabase, private val preferences:suspend ()->ThemeS
         }
         check(prefs.edit().putBoolean("journal_imported_v2",true).commit())
     }
-    suspend fun saveWellbeing(entry:WellbeingEntry) = mutex.withLock {
-        require(!entry.mood.isNullOrBlank()||entry.text.isNotBlank())
+    suspend fun saveWellbeing(entry: WellbeingEntry) = mutex.withLock {
+        require(!entry.mood.isNullOrBlank() || entry.text.isNotBlank())
+
         db.withTransaction {
-            val journal=db.wellbeing()
-            journal.save(entry.copy(mood=entry.mood?.takeIf {it.isNotBlank()}))
-            entry.groupId?.let {id->
-                val members=journal.members(id).filter {dao.occurrence(it)?.state==Occurrence.TAKEN}
-                journal.link(members.map {WellbeingLink(entry.id,it)})
-                journal.group(id)?.let {journal.saveGroup(it.copy(status="answered"))}
+            val journal = db.wellbeing()
+            journal.save(entry.copy(mood = entry.mood?.takeIf { it.isNotBlank() }))
+            entry.groupId?.let { id ->
+                val members = journal.members(id).filter { dao.occurrence(it)?.state == Occurrence.TAKEN }
+                journal.link(members.map { WellbeingLink(entry.id, it) })
+                journal.group(id)?.let { journal.saveGroup(it.copy(status = "answered")) }
             }
         }
     }

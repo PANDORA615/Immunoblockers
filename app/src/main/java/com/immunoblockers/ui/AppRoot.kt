@@ -70,7 +70,7 @@ fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit, r
             composable("today") { TodayScreen(rows, meds, vm, {nav.navigate("edit/new")}, {selected=it.id}, {nav.navigate("tools/$it")}) }
             composable("medications") { MedicationsScreen(meds, {nav.navigate("detail/${it.id}")}) }
             composable("history") { JournalScreen(rows, meds, vm, onRow={selected=it.id}) }
-            composable("helpers") { Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {HomeTools {nav.navigate("tools/$it")}} }
+            composable("helpers") { Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {HomeTools {nav.navigate("tools/$it")}} }
             composable("profile") {ProfileScreen(vm){nav.popBackStack()}}
             composable("wellbeing/{group}") {back->Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp)) {TextButton(onClick={nav.popBackStack()}){Text("Назад")};WellbeingScreen(vm,back.arguments?.getString("group"))}}
             composable("settings") { SettingsScreen(settings, vm) }

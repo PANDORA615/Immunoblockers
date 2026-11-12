@@ -16,6 +16,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import java.io.File
 
 suspend fun copyLocalImage(context:android.content.Context,uri:Uri):String=withContext(Dispatchers.IO) {
@@ -30,6 +31,18 @@ suspend fun copyLocalImage(context:android.content.Context,uri:Uri):String=withC
  target.outputStream().use {check(bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG,90,it))}
  bitmap.recycle();target.absolutePath
 }
+suspend fun storeLocalImage(vm:AppViewModel,path:String,avatar:Boolean) = withContext(Dispatchers.IO) {
+ var previous=""
+ vm.app.settings.update {settings->
+  previous=if(avatar)settings.avatarPath else settings.widgetImage
+  if(avatar)settings.copy(avatarPath=path) else settings.copy(widgetImage=path)
+ }
+ val current=vm.app.settings.flow.first()
+ if(previous.isNotBlank()&&previous!=current.avatarPath&&previous!=current.widgetImage) {
+  val file=File(previous)
+  if(file.canonicalFile.parentFile==File(vm.app.filesDir,"images").canonicalFile)file.delete()
+ }
+}
 @Composable fun ProfileAvatar(path:String,size:Int=32) {
  val bitmap by produceState<android.graphics.Bitmap?>(null,path) {value=withContext(Dispatchers.IO){if(path.isBlank())null else android.graphics.BitmapFactory.decodeFile(path)}}
  bitmap?.let {Image(it.asImageBitmap(),"Аватар",Modifier.size(size.dp).clip(CircleShape),contentScale=ContentScale.Crop)}?:Text("◉",Modifier.size(size.dp),style=MaterialTheme.typography.titleLarge)
@@ -40,7 +53,7 @@ suspend fun copyLocalImage(context:android.content.Context,uri:Uri):String=withC
  val scope=rememberCoroutineScope()
  var error by remember {mutableStateOf("")}
  val picker=rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()){uri->if(uri!=null)scope.launch {
-  try {val path=copyLocalImage(vm.app,uri);vm.app.settings.update {it.copy(avatarPath=path)};error=""}catch(_:Exception){error="Не удалось открыть изображение"}
+  try {val path=copyLocalImage(vm.app,uri);storeLocalImage(vm,path,true);error=""}catch(_:Exception){error="Не удалось открыть изображение"}
  }}
  Column(Modifier.fillMaxSize().padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
   TextButton(onClick=back){Text("Назад")}
@@ -49,7 +62,7 @@ suspend fun copyLocalImage(context:android.content.Context,uri:Uri):String=withC
   AppTextField(nickname,{nickname=it.take(32)},label={Text("Ник · до 32 символов")},singleLine=true,modifier=Modifier.fillMaxWidth())
   Button(onClick={vm.settings {it.copy(nickname=nickname.trim())}}){Text("Сохранить ник")}
   OutlinedButton(onClick={picker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}){Text("Выбрать фото")}
-  if(settings.avatarPath.isNotBlank())TextButton(onClick={vm.settings {it.copy(avatarPath="")}}){Text("Удалить фото")}
+  if(settings.avatarPath.isNotBlank())TextButton(onClick={scope.launch {storeLocalImage(vm,"",true)}}){Text("Удалить фото")}
   if(error.isNotEmpty())Text(error)
  }
 }

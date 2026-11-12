@@ -24,6 +24,7 @@ data class SurveyMember(val groupId:String,val occurrenceId:String)
  @Query("SELECT * FROM survey_groups") suspend fun groups():List<SurveyGroup>
  @Query("SELECT * FROM survey_groups WHERE id=:id") suspend fun group(id:String):SurveyGroup?
  @Upsert suspend fun saveGroup(group:SurveyGroup)
+ @Query("SELECT groupId FROM survey_members WHERE occurrenceId=:id LIMIT 1") suspend fun membership(id:String):String?
  @Insert(onConflict=OnConflictStrategy.IGNORE) suspend fun member(member:SurveyMember)
  @Query("DELETE FROM survey_members WHERE groupId=:id") suspend fun deleteMembers(id:String)
  @Query("DELETE FROM survey_groups WHERE id=:id") suspend fun deleteGroup(id:String)
