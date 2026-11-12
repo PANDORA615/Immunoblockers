@@ -53,6 +53,7 @@ fun AppTheme(settings: ThemeSettings, content: @Composable () -> Unit) {
     val animated = target.copy(primary=c(target.primary), onPrimary=c(target.onPrimary), primaryContainer=c(target.primaryContainer), onPrimaryContainer=c(target.onPrimaryContainer),
         secondary=c(target.secondary), onSecondary=c(target.onSecondary), secondaryContainer=c(target.secondaryContainer), onSecondaryContainer=c(target.onSecondaryContainer),
         tertiary=c(target.tertiary), onTertiary=c(target.onTertiary), tertiaryContainer=c(target.tertiaryContainer), onTertiaryContainer=c(target.onTertiaryContainer),
+        error=c(target.error), onError=c(target.onError), errorContainer=c(target.errorContainer), onErrorContainer=c(target.onErrorContainer), scrim=c(target.scrim),
         background=c(target.background), onBackground=c(target.onBackground), surface=c(target.surface), onSurface=c(target.onSurface), surfaceVariant=c(target.surfaceVariant), onSurfaceVariant=c(target.onSurfaceVariant),
         outline=c(target.outline), outlineVariant=c(target.outlineVariant), inverseSurface=c(target.inverseSurface), inverseOnSurface=c(target.inverseOnSurface), inversePrimary=c(target.inversePrimary), surfaceTint=c(target.surfaceTint),
         surfaceBright=c(target.surfaceBright), surfaceDim=c(target.surfaceDim), surfaceContainerLowest=c(target.surfaceContainerLowest), surfaceContainerLow=c(target.surfaceContainerLow), surfaceContainer=c(target.surfaceContainer), surfaceContainerHigh=c(target.surfaceContainerHigh), surfaceContainerHighest=c(target.surfaceContainerHighest))

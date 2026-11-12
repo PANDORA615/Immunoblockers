@@ -14,7 +14,10 @@ class MainFlowTest {
         compose.activityRule.scenario.recreate()
         compose.onNodeWithText("UI тест").assertExists()
         compose.onNodeWithText("Сохранить").performScrollTo().performClick()
-        compose.waitUntil(15000){compose.onAllNodesWithText("UI тест").fetchSemanticsNodes().isNotEmpty()}
+        compose.waitUntil(30000){compose.onAllNodesWithTag("todayList").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithTag("todayList").performScrollToNode(hasText("UI тест"))
+        compose.onNodeWithText("UI тест").assertExists()
+        compose.onNodeWithTag("todayList").performTouchInput { swipeUp() }
         compose.onAllNodesWithText("Принять").onFirst().performScrollTo().performClick()
         compose.onAllNodesWithText("Принято").onFirst().assertExists()
         compose.onNodeWithText("Настройки").performClick()
