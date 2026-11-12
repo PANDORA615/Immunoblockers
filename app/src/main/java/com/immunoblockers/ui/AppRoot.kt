@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.*
@@ -62,7 +63,7 @@ fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit, r
         topBar={ if(main) CenterAlignedTopAppBar(title={Text(stringResource(R.string.app_name), style=MaterialTheme.typography.titleLarge)}) },
         snackbarHost={ SnackbarHost(snack) },
         bottomBar={ if(main) NavigationBar { tabs.forEach { (path, title, icon) -> NavigationBarItem(selected=route==path, onClick={nav.navigate(path) { popUpTo(nav.graph.startDestinationId) { saveState=true }; launchSingleTop=true; restoreState=true }}, icon={Icon(icon, null)}, label={Text(stringResource(title))}) } } },
-        floatingActionButton={ if(route == "today" || route == "medications") ExtendedFloatingActionButton(onClick={nav.navigate("edit/new")}, icon={Icon(Icons.Outlined.Add,null)}, text={Text(stringResource(R.string.add_medication))}) }
+        floatingActionButton={ if(route == "today" || route == "medications") ExtendedFloatingActionButton(modifier=Modifier.testTag("addMedication"),onClick={nav.navigate("edit/new")}, icon={Icon(Icons.Outlined.Add,null)}, text={Text(stringResource(R.string.add_medication))}) }
     ) { padding ->
         NavHost(nav, "today", modifier=Modifier.padding(padding), enterTransition={ fadeIn(tween(duration)) }, exitTransition={ fadeOut(tween(duration)) }) {
             composable("today") { TodayScreen(rows, meds, vm, {nav.navigate("edit/new")}, {selected=it.id}) }

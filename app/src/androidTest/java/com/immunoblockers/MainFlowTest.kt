@@ -11,7 +11,7 @@ import org.junit.Test
 class MainFlowTest {
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
     @Test fun createSeeTakeAndPersistTheme() {
-        compose.onAllNodesWithText("Добавить лекарство").onFirst().performClick()
+        compose.onNodeWithTag("addMedication").performClick()
         compose.onNodeWithText("Название лекарства").performTextInput("UI тест")
         compose.onNodeWithText("Разовая дозировка").performTextInput("1")
         compose.activityRule.scenario.recreate()
