@@ -77,6 +77,9 @@ jobs:
         with:
           name: Immunoblockers-universal
           path: release-candidate
+      - name: Install video frame inspection tools
+        if: matrix.api == 35
+        run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
       - name: Enable KVM
         run: sudo chmod 666 /dev/kvm
       - name: Room, widgets, journal and Compose

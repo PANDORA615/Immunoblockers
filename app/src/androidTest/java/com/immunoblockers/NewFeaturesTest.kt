@@ -23,7 +23,11 @@ class NewFeaturesTest {
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         android.os.SystemClock.sleep(350)
         val app=ApplicationProvider.getApplicationContext<ImmunoblockersApp>()
-        val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?:return
+        var captured:Bitmap?=null
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            captured=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        }
+        val bitmap=captured?:return
         val folder=File(app.getExternalFilesDir(null),"screenshots").apply{mkdirs()}
         File(folder,"$name.png").outputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
         bitmap.recycle()
