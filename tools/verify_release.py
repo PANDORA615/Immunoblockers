@@ -1,4 +1,4 @@
-"""Verify the package, version and explicitly selected 0.4.0 publisher certificate."""
+"""Verify the package, version and explicitly selected 0.4.1 publisher certificate."""
 import argparse
 import hashlib
 import os
@@ -20,17 +20,17 @@ def main():
     output = subprocess.check_output([str(tools / 'apksigner'), 'verify', '--print-certs', str(args.apk)], text=True)
     certs = re.findall(r'certificate SHA-256 digest: ([0-9a-f]+)', output)
     if certs != [EXPECTED_CERT]:
-        raise SystemExit('Unexpected 0.4.0 publisher certificate; refusing publication')
+        raise SystemExit('Unexpected 0.4.1 publisher certificate; refusing publication')
     if args.require_upgrade_from_030 and certs != [PREVIOUS_CERT]:
         raise SystemExit('The new signing key cannot update 0.3.0; a fresh installation is required')
     manifest = subprocess.check_output([str(tools / 'aapt'), 'dump', 'badging', str(args.apk)], text=True)
-    if not re.search(r"package: name='com.immunoblockers' versionCode='4' versionName='0.4.0'", manifest):
+    if not re.search(r"package: name='com.immunoblockers' versionCode='5' versionName='0.4.1'", manifest):
         raise SystemExit('Unexpected package or version')
     checksum = hashlib.sha256(args.apk.read_bytes()).hexdigest()
     args.apk.with_suffix('.apk.sha256').write_text(f'{checksum}  {args.apk.name}\n')
     print(f'Certificate, package and version verified. SHA256: {checksum}')
     if certs != [PREVIOUS_CERT]:
-        print('New signing key: cannot install over 0.3.0. Do not publish as a compatible OTA update.')
+        print('Same publisher as 0.4.0; incompatible with the older 0.3.0 certificate.')
 
 
 if __name__ == '__main__':

@@ -31,17 +31,23 @@ suspend fun copyLocalImage(context:android.content.Context,uri:Uri):String=withC
  target.outputStream().use {check(bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG,90,it))}
  bitmap.recycle();target.absolutePath
 }
-suspend fun storeLocalImage(vm:AppViewModel,path:String,avatar:Boolean) = withContext(Dispatchers.IO) {
+enum class LocalImageUse { AVATAR, WIDGET, WALLPAPER }
+suspend fun storeLocalImage(vm:AppViewModel,path:String,avatar:Boolean) = storeLocalImage(vm,path,if(avatar)LocalImageUse.AVATAR else LocalImageUse.WIDGET)
+suspend fun storeLocalImage(vm:AppViewModel,path:String,use:LocalImageUse) = withContext(Dispatchers.IO) {
  var previous=""
  vm.app.settings.update {settings->
-  previous=if(avatar)settings.avatarPath else settings.widgetImage
-  if(avatar)settings.copy(avatarPath=path) else settings.copy(widgetImage=path)
+  previous=when(use){LocalImageUse.AVATAR->settings.avatarPath;LocalImageUse.WIDGET->settings.widgetImage;LocalImageUse.WALLPAPER->settings.wallpaperPath}
+  when(use){LocalImageUse.AVATAR->settings.copy(avatarPath=path);LocalImageUse.WIDGET->settings.copy(widgetImage=path);LocalImageUse.WALLPAPER->settings.copy(wallpaperPath=path)}
  }
  val current=vm.app.settings.flow.first()
- if(previous.isNotBlank()&&previous!=current.avatarPath&&previous!=current.widgetImage) {
+ if(previous.isNotBlank()&&previous !in listOf(current.avatarPath,current.widgetImage,current.wallpaperPath)) {
   val file=File(previous)
   if(file.canonicalFile.parentFile==File(vm.app.filesDir,"images").canonicalFile)file.delete()
  }
+}
+@Composable fun LocalImagePreview(path:String,description:String,modifier:Modifier=Modifier) {
+ val bitmap by produceState<android.graphics.Bitmap?>(null,path) {value=withContext(Dispatchers.IO){if(path.isBlank())null else android.graphics.BitmapFactory.decodeFile(path)}}
+ bitmap?.let {Image(it.asImageBitmap(),description,modifier.clip(MaterialTheme.shapes.large),contentScale=ContentScale.Crop)}
 }
 @Composable fun ProfileAvatar(path:String,size:Int=32) {
  val bitmap by produceState<android.graphics.Bitmap?>(null,path) {value=withContext(Dispatchers.IO){if(path.isBlank())null else android.graphics.BitmapFactory.decodeFile(path)}}

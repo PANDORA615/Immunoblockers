@@ -15,6 +15,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.*
@@ -63,11 +65,14 @@ fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit, r
     val main = tabs.any { it.first == route }
     val tabState = rememberSaveableStateHolder()
     val duration = if(LocalReducedMotion.current) Motion.SHORT else Motion.SCREEN
+    val addMedicationLabel=stringResource(R.string.add_medication)
     Scaffold(
+        containerColor=androidx.compose.ui.graphics.Color.Transparent,
+        contentColor=MaterialTheme.colorScheme.onSurface,
         topBar={ if(main) CenterAlignedTopAppBar(colors=TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor=androidx.compose.ui.graphics.Color.Transparent),title={TextButton(onClick={nav.navigate("profile")}) {ProfileAvatar(settings.avatarPath);Spacer(Modifier.width(8.dp));Text(settings.nickname.ifBlank {"Мой профиль"}, style=MaterialTheme.typography.titleLarge)}}) },
         snackbarHost={ SnackbarHost(snack) },
         bottomBar={ if(main&&settings.interfaceStyle=="glass")LiquidNavigation(route){path->nav.navigate(path){popUpTo(nav.graph.startDestinationId){saveState=true};launchSingleTop=true;restoreState=true}} else if(main) NavigationBar { tabs.forEach { (path, title, icon) -> NavigationBarItem(selected=route==path, onClick={nav.navigate(path) { popUpTo(nav.graph.startDestinationId) { saveState=true }; launchSingleTop=true; restoreState=true }}, icon={Icon(icon, null)}, label={Text(stringResource(title))}) } } },
-        floatingActionButton={ if(route == "today" || route == "medications") ExtendedFloatingActionButton(modifier=Modifier.testTag("addMedication"),onClick={nav.navigate("edit/new")}, icon={Icon(Icons.Outlined.Add,null)}, text={Text(stringResource(R.string.add_medication))}) }
+        floatingActionButton={ if(route == "today" || route == "medications") ExtendedFloatingActionButton(modifier=Modifier.testTag("addMedication").semantics {contentDescription=addMedicationLabel},onClick={nav.navigate("edit/new")}, icon={Icon(Icons.Outlined.Add,null)}, text={Text(stringResource(R.string.add_medication))}) }
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
         // Keep the graph alive, but never draw an outgoing detail screen over a main tab.

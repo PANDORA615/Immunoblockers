@@ -25,12 +25,12 @@ class ProcessPersistenceTest {
   if(phase=="prepare") {
    val settings=app.settings.flow.first()
    backup.edit().putString("nickname",settings.nickname).putString("avatar",settings.avatarPath)
-     .putBoolean("ask",settings.askWellbeing).putInt("hours",settings.surveyHours).putInt("pid",android.os.Process.myPid()).commit()
+     .putString("wallpaper",settings.wallpaperPath).putBoolean("ask",settings.askWellbeing).putInt("hours",settings.surveyHours).putInt("pid",android.os.Process.myPid()).commit()
    val image=File(app.filesDir,"images/process-test.jpg").apply {parentFile!!.mkdirs()}
    val bitmap=Bitmap.createBitmap(24,24,Bitmap.Config.ARGB_8888)
    bitmap.eraseColor(android.graphics.Color.GREEN)
    image.outputStream().use {bitmap.compress(Bitmap.CompressFormat.JPEG,90,it)};bitmap.recycle()
-   app.settings.update {it.copy(nickname="Профиль после перезапуска",avatarPath=image.absolutePath,askWellbeing=true,surveyHours=2)}
+   app.settings.update {it.copy(nickname="Профиль после перезапуска",avatarPath=image.absolutePath,wallpaperPath=image.absolutePath,askWellbeing=true,surveyHours=2)}
    app.repository.saveWellbeing(WellbeingEntry(id,123456,text="Текст после перезапуска"))
    val now=System.currentTimeMillis()
    app.repository.dao.insertOccurrences(listOf(Occurrence(id,id,1,"2026-11-12","09:00",now,"Тест процесса","1","мг")))
@@ -48,6 +48,7 @@ class ProcessPersistenceTest {
     val settings=app.settings.flow.first()
     assertEquals("Профиль после перезапуска",settings.nickname)
     assertTrue(File(settings.avatarPath).isFile)
+    assertEquals(settings.avatarPath,settings.wallpaperPath)
     assertEquals("Текст после перезапуска",journal.entry(id)!!.text)
     assertNull(journal.entry(id)!!.mood)
     val group=backup.getString("group",null)!!
@@ -63,7 +64,7 @@ class ProcessPersistenceTest {
     if(group!=null){WorkManager.getInstance(app).cancelUniqueWork("wellbeing-survey-$group");journal.deleteMembers(group);journal.deleteGroup(group)}
     app.database.openHelper.writableDatabase.execSQL("DELETE FROM occurrences WHERE id=?",arrayOf(id))
     File(app.filesDir,"images/process-test.jpg").delete()
-    app.settings.update {it.copy(nickname=backup.getString("nickname","").orEmpty(),avatarPath=backup.getString("avatar","").orEmpty(),askWellbeing=backup.getBoolean("ask",false),surveyHours=backup.getInt("hours",2))}
+    app.settings.update {it.copy(nickname=backup.getString("nickname","").orEmpty(),avatarPath=backup.getString("avatar","").orEmpty(),wallpaperPath=backup.getString("wallpaper","").orEmpty(),askWellbeing=backup.getBoolean("ask",false),surveyHours=backup.getInt("hours",2))}
     backup.edit().clear().commit()
    }
   }

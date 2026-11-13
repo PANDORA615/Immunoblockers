@@ -54,6 +54,7 @@ class DesignAndJournalTest {
         }
         compose.onNodeWithText("История").performClick()
         compose.onNodeWithTag("journalList").performScrollToNode(hasText("График приёмов"))
+        compose.onNodeWithTag("chart-day-summary").performScrollTo()
         screenshot("chart")
         compose.onNodeWithTag("journalList").performScrollToNode(hasText("1,25 мг"))
         compose.onNodeWithText("1,25 мг").assertExists()

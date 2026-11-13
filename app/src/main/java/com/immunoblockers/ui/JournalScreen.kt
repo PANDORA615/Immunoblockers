@@ -30,38 +30,71 @@ fun IntakeChart(days: List<IntakeDay>, selected: String?, onDay: ((LocalDate) ->
     val peak=maxOf(days.maxOfOrNull {it.planned}?:0,1)
     val colors=MaterialTheme.colorScheme
     val scroll=rememberScrollState()
-    val dayWidth=(48f*maxOf(1f,LocalDensity.current.fontScale)).dp
+    var inspected by rememberSaveable {mutableStateOf<String?>(null)}
+    val active=days.firstOrNull {it.date.toString()==(selected?:inspected)}?:days.lastOrNull()
+    val dayWidth=(56f*maxOf(1f,LocalDensity.current.fontScale)).dp
     LaunchedEffect(days.firstOrNull()?.date,days.lastOrNull()?.date) {scroll.scrollTo(scroll.maxValue)}
+    if(days.none {it.planned>0}) {
+        Text("В этом периоде нет запланированных приёмов",modifier=Modifier.testTag("chartEmpty"))
+        return
+    }
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.fillMaxWidth().horizontalScroll(scroll),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.Bottom) {
-            days.forEach {day ->
-                val label=stringResource(R.string.chart_day_accessibility,displayDate(day.date.toString()),day.planned,day.taken,day.skipped,day.unmarked,day.waiting)
-                val chosen=selected==day.date.toString()
-                val action=if(onDay==null)Modifier else Modifier.selectable(chosen,onClick={onDay(day.date)},role=Role.Button)
-                Column(Modifier.width(dayWidth).then(action).semantics(mergeDescendants=true){contentDescription=label}.padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.completion_count,day.taken,day.planned),style=MaterialTheme.typography.labelSmall)
-                    Box(Modifier.height(128.dp).width(24.dp),contentAlignment=Alignment.BottomCenter) {
-                        if(day.planned==0)Box(Modifier.fillMaxWidth().height(3.dp).background(colors.outlineVariant,MaterialTheme.shapes.small))
-                        else Column(Modifier.fillMaxWidth().height((128f*day.planned/peak).dp)) {
-                            if(day.waiting>0)Box(Modifier.fillMaxWidth().weight(day.waiting.toFloat()).background(colors.secondaryContainer))
-                            if(day.unmarked>0)Box(Modifier.fillMaxWidth().weight(day.unmarked.toFloat()).background(colors.outlineVariant))
-                            if(day.skipped>0)Box(Modifier.fillMaxWidth().weight(day.skipped.toFloat()).background(colors.error))
-                            if(day.taken>0)Box(Modifier.fillMaxWidth().weight(day.taken.toFloat()).background(colors.primary))
+        Text("Принято / запланировано",style=MaterialTheme.typography.labelLarge)
+        Row(Modifier.fillMaxWidth()) {
+            Column(Modifier.width(28.dp).padding(top=30.dp),horizontalAlignment=Alignment.End) {
+                Box(Modifier.height(128.dp)) {
+                    Text(peak.toString(),Modifier.align(Alignment.TopEnd),style=MaterialTheme.typography.labelSmall)
+                    if(peak>1&&peak%2==0)Text((peak/2).toString(),Modifier.align(Alignment.CenterEnd),style=MaterialTheme.typography.labelSmall)
+                    Text("0",Modifier.align(Alignment.BottomEnd),style=MaterialTheme.typography.labelSmall)
+                }
+            }
+            Row(Modifier.weight(1f).horizontalScroll(scroll),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.Bottom) {
+                days.forEach {day ->
+                    val label=stringResource(R.string.chart_day_accessibility,displayDate(day.date.toString()),day.planned,day.taken,day.skipped,day.unmarked,day.waiting)
+                    val chosen=active?.date==day.date
+                    Column(Modifier.width(dayWidth).selectable(chosen,onClick={inspected=day.date.toString();onDay?.invoke(day.date)},role=Role.Button)
+                        .testTag("chart-day-${day.date}").semantics(mergeDescendants=true){contentDescription=label}.padding(vertical=8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                        Text("${day.taken}/${day.planned}",style=MaterialTheme.typography.labelMedium)
+                        Box(Modifier.height(128.dp).fillMaxWidth(),contentAlignment=Alignment.BottomCenter) {
+                            androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
+                                listOf(0f,.5f,1f).forEach {fraction->
+                                    drawLine(colors.outlineVariant,androidx.compose.ui.geometry.Offset(0f,size.height*fraction),androidx.compose.ui.geometry.Offset(size.width,size.height*fraction))
+                                }
+                            }
+                            if(day.planned>0)Column(Modifier.width(26.dp).height((128f*day.planned/peak).dp)) {
+                                if(day.waiting>0)Box(Modifier.fillMaxWidth().weight(day.waiting.toFloat()).background(colors.secondaryContainer))
+                                if(day.unmarked>0)Box(Modifier.fillMaxWidth().weight(day.unmarked.toFloat()).background(colors.tertiary))
+                                if(day.skipped>0)Box(Modifier.fillMaxWidth().weight(day.skipped.toFloat()).background(colors.error))
+                                if(day.taken>0)Box(Modifier.fillMaxWidth().weight(day.taken.toFloat()).background(colors.primary))
+                            }
                         }
-                    }
-                    Surface(color=if(chosen)colors.primaryContainer else colors.surfaceContainerLow,shape=MaterialTheme.shapes.small) {
-                        Text(day.date.format(DateTimeFormatter.ofPattern("d.MM")),style=MaterialTheme.typography.labelSmall,modifier=Modifier.padding(6.dp))
+                        Surface(color=if(chosen)colors.primaryContainer else colors.surfaceContainerLow,shape=MaterialTheme.shapes.small) {
+                            Column(Modifier.padding(6.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+                                Text(day.date.format(DateTimeFormatter.ofPattern("d.MM")),style=MaterialTheme.typography.labelMedium)
+                                Text(day.date.format(DateTimeFormatter.ofPattern("EE",ru)),style=MaterialTheme.typography.labelSmall)
+                            }
+                        }
                     }
                 }
             }
         }
         FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            listOf(R.string.taken to colors.primary,R.string.skip to colors.error,R.string.unmarked to colors.outlineVariant,R.string.pending to colors.secondaryContainer).forEach {(title,color)->
+            listOf("Принято" to colors.primary,"Пропущено" to colors.error,"Без отметки" to colors.tertiary,"Ожидает" to colors.secondaryContainer).forEach {(title,color)->
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                    Box(Modifier.size(10.dp).background(color,CircleShape));Text(stringResource(title),style=MaterialTheme.typography.labelSmall)
+                    Box(Modifier.size(10.dp).background(color,CircleShape));Text(title,style=MaterialTheme.typography.labelSmall)
                 }
             }
         }
+        active?.let {day->
+            Surface(color=colors.surfaceContainerLow.copy(alpha=.7f),shape=MaterialTheme.shapes.medium,modifier=Modifier.fillMaxWidth().testTag("chart-day-summary")) {
+                Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                    Text(displayDate(day.date.toString()),style=MaterialTheme.typography.titleSmall)
+                    Text("Принято: ${day.taken} из ${day.planned}",style=MaterialTheme.typography.bodyLarge)
+                    Text("Пропущено: ${day.skipped} · Без отметки: ${day.unmarked} · Ожидает: ${day.waiting}",style=MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        Text("Нажмите на день для подробностей. Без отметки — приёмы за прошлые дни, которые не отмечены.",style=MaterialTheme.typography.bodySmall,color=colors.onSurfaceVariant)
     }
 }
 
@@ -97,7 +130,7 @@ fun JournalScreen(rows: List<Occurrence>, meds: List<Medication>, vm: AppViewMod
             Text(stringResource(R.string.journal_period,displayDate(from.toString()),displayDate(today.toString())),style=MaterialTheme.typography.bodySmall)
         }
         item {
-            Card {Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            AppCard {Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.intake_chart),style=MaterialTheme.typography.titleLarge)
                 if(chart.isNotEmpty())Text(stringResource(R.string.chart_range,displayDate(chart.first().date.toString()),displayDate(chart.last().date.toString())),style=MaterialTheme.typography.labelMedium)
                 Text(stringResource(R.string.chart_hint),style=MaterialTheme.typography.bodySmall)
