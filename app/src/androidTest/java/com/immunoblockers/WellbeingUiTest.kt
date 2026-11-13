@@ -16,8 +16,9 @@ class WellbeingUiTest {
   compose.waitForIdle()
   val instrumentation=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
   instrumentation.waitForIdleSync();android.os.SystemClock.sleep(350)
+  val automation=instrumentation.uiAutomation
   var captured:android.graphics.Bitmap?=null
-  instrumentation.runOnMainSync {captured=instrumentation.uiAutomation.takeScreenshot()}
+  instrumentation.runOnMainSync {captured=automation.takeScreenshot()}
   val bitmap=captured?:return
   val folder=java.io.File(app.getExternalFilesDir(null),"screenshots").apply {mkdirs()}
   java.io.File(folder,"$name.png").outputStream().use {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
