@@ -3,7 +3,7 @@
 Скриншоты настоящего приложения на эмуляторах Android 8/API 26 и Android 15/API 35. Тестовые данные и рисунки синтетические.
 
 - [Главная Android 8: одна кнопка](android8-home.png).
-- [Главная Android 15 с уведомлениями, как в сообщении об ошибке](android15-empty-home.png).
+- [Главная Android 15 с уведомлениями — кадр записи прокрутки](android15-empty-home.png).
 - [График Android 15](android15-chart.png) и [обои](android15-wallpaper.png).
 - [Обои и предпросмотр, тёмный Material](android8-wallpaper.png).
 - [График: шкала, даты, легенда и расшифровка дня](android8-chart.png).
