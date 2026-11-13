@@ -8,18 +8,6 @@ import java.math.BigDecimal
 data class StockLine(val id:String,val name:String,val unit:String,val remaining:BigDecimal,val threshold:BigDecimal)
 class LocalBook(context:Context) {
     private val prefs=context.getSharedPreferences("personal_book",Context.MODE_PRIVATE)
-    var mood:String
-        get()=prefs.getString("mood","").orEmpty()
-        set(value){prefs.edit().putString("mood",value).putLong("mood_at",System.currentTimeMillis()).apply()}
-    var note:String
-        get()=prefs.getString("note","").orEmpty()
-        set(value){prefs.edit().putString("note",value).putLong("mood_at",System.currentTimeMillis()).apply()}
-    fun saveMood(value:String,note:String){prefs.edit().putString("mood",value).putString("note",note).putLong("mood_at",System.currentTimeMillis()).apply()}
-    val moodAt get()=prefs.getLong("mood_at",0)
-    var care:String
-        get()=prefs.getString("care","").orEmpty()
-        set(value){prefs.edit().putString("care",value).putLong("care_at",System.currentTimeMillis()).apply()}
-    val careAt get()=prefs.getLong("care_at",0)
     @Synchronized fun setStock(med:Medication,amount:BigDecimal,threshold:BigDecimal,rows:List<Occurrence>) {
         require(amount.signum()>=0&&threshold.signum()>=0)
         val root=JSONObject(prefs.getString("stocks","{}")!!)

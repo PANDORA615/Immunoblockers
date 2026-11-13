@@ -1,6 +1,8 @@
 package com.immunoblockers
 
 import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.SemanticsActions
+import org.junit.Assert.assertTrue
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.core.app.ApplicationProvider
 import com.immunoblockers.data.Occurrence
@@ -16,8 +18,9 @@ class MainFlowTest {
         compose.onNodeWithText("Разовая дозировка").performTextInput("1")
         compose.activityRule.scenario.recreate()
         compose.onNodeWithText("UI тест").assertExists()
-        compose.onNodeWithText("Сохранить").performScrollTo().performClick()
-        compose.waitUntil(30000){compose.onAllNodesWithTag("todayList").fetchSemanticsNodes().isNotEmpty()}
+        compose.onNodeWithText("Сохранить").performScrollTo().performSemanticsAction(SemanticsActions.OnClick){assertTrue(it())}
+        try {compose.waitUntil(30000){compose.onAllNodesWithTag("todayList").fetchSemanticsNodes().isNotEmpty()}}
+        catch(failure:Exception){throw AssertionError(compose.onRoot().printToString(),failure)}
         compose.onNodeWithTag("todayList").performScrollToNode(hasText("UI тест"))
         compose.onNodeWithText("UI тест").assertExists()
         compose.onNodeWithTag("todayList").performTouchInput { swipeUp() }
@@ -28,8 +31,9 @@ class MainFlowTest {
         compose.onAllNodesWithText("Принято").onFirst().assertExists()
         compose.onNodeWithText("Настройки").performClick()
         compose.onNodeWithText("Тёмная").performClick()
-        compose.waitForIdle()
+        compose.waitUntil(15000){compose.onAllNodes(hasText("Тёмная") and isSelected()).fetchSemanticsNodes().size==1}
         compose.activityRule.scenario.recreate()
+        compose.waitUntil(15000){compose.onAllNodes(hasText("Тёмная") and isSelected()).fetchSemanticsNodes().size==1}
         compose.onNodeWithText("Тёмная").assertIsSelected()
     }
 }

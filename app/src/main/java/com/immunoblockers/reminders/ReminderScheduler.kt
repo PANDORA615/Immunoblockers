@@ -36,14 +36,15 @@ class ReminderScheduler(private val context: Context, private val repo: Reposito
     fun cancel(id: String) { manager.cancel(id, 0) }
     suspend fun reconcileAndSchedule() = mutex.withLock {
         repo.reconcile()
+        com.immunoblockers.features.WellbeingSurveys.reconcile(context.applicationContext as ImmunoblockersApp)
         scheduleLocked()
-        WidgetUpdater.updateAll(context, repo.dao.occurrences(), settings.flow.first(), repo.dao.medications().filter { !it.paused && !it.archived }.map { it.id }.toSet())
+        WidgetUpdater.updateAll(context, repo.dao.occurrences(), settings.flow.first(), repo.dao.medications().filter { !it.paused && !it.archived }.map { it.id }.toSet(),repo.db.wellbeing().latest())
     }
     private suspend fun scheduleLocked() {
         val all = repo.dao.occurrences()
         val active = repo.dao.medications().filter { !it.paused && !it.archived }.map { it.id }.toSet()
         val live = all.filter { it.state == Occurrence.PENDING && it.medicationId in active }.map { it.id }.toSet()
-        context.getSystemService(NotificationManager::class.java).activeNotifications.forEach { if (it.tag != null && it.tag !in live && it.tag != "test" && it.tag != "summary") manager.cancel(it.tag, it.id) }
+        context.getSystemService(NotificationManager::class.java).activeNotifications.forEach { if (it.tag != null && !it.tag!!.startsWith("wellbeing-survey-") && it.tag !in live && it.tag != "test" && it.tag != "summary") manager.cancel(it.tag, it.id) }
         val pref = settings.flow.first()
         if (!pref.reminders) { alarm.cancel(tick()); manager.cancelAll(); return }
         val now = System.currentTimeMillis()

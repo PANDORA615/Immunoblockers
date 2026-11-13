@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.platform.LocalContext
 import com.google.android.material.color.utilities.Hct
@@ -67,6 +68,17 @@ fun AppTheme(settings: ThemeSettings, content: @Composable () -> Unit) {
         surfaceBright=c(target.surfaceBright), surfaceDim=c(target.surfaceDim), surfaceContainerLowest=c(target.surfaceContainerLowest), surfaceContainerLow=c(target.surfaceContainerLow), surfaceContainer=c(target.surfaceContainer), surfaceContainerHigh=c(target.surfaceContainerHigh), surfaceContainerHighest=c(target.surfaceContainerHighest))
     SideEffect {
         (context as? android.app.Activity)?.window?.let { window ->
+            val background = animated.surface.copy(alpha = 1f).toArgb()
+            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(background))
+            @Suppress("DEPRECATION")
+            run {
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = background
+            }
+            if (Build.VERSION.SDK_INT >= 29) {
+                window.isStatusBarContrastEnforced = false
+                window.isNavigationBarContrastEnforced = false
+            }
             WindowCompat.getInsetsController(window, window.decorView).apply {
                 isAppearanceLightStatusBars = animated.surface.luminance() > 0.5f
                 isAppearanceLightNavigationBars = animated.surface.luminance() > 0.5f

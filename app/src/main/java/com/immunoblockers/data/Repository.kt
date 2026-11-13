@@ -1,11 +1,13 @@
 package com.immunoblockers.data
 
 import androidx.room.withTransaction
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.*
 
-class Repository(val db: AppDatabase) {
+class Repository(val db: AppDatabase, private val preferences:suspend ()->ThemeSettings = {ThemeSettings()}) {
+    val wellbeing = db.wellbeing().observe()
     val dao = db.dao()
     val medications = dao.observeMedications()
     val occurrences = dao.observeOccurrences()
@@ -43,11 +45,19 @@ class Repository(val db: AppDatabase) {
             }
         }
     }
-    suspend fun mark(id: String, state: String): DoseChange? = mutex.withLock {
+    suspend fun mark(id: String, state: String, now:Long=System.currentTimeMillis()): DoseChange? = mutex.withLock {
         db.withTransaction {
             val before = dao.occurrence(id) ?: return@withTransaction null
-            val now = System.currentTimeMillis()
-            if (dao.mark(id, state, now) == 0) null else DoseChange(before, before.copy(state = state, markedAt = now, snoozedUntil = null))
+            if (dao.mark(id, state, now) == 0) null else {
+                val settings=preferences()
+                if(state==Occurrence.TAKEN && settings.askWellbeing && db.wellbeing().membership(id)==null) {
+                    val journal=db.wellbeing()
+                    val group=journal.groups().filter {it.status=="pending" && now>=it.firstAt && now-it.firstAt<=30*60_000L}.maxByOrNull {it.firstAt}
+                        ?: SurveyGroup(java.util.UUID.randomUUID().toString(),now,now+settings.surveyHours.coerceIn(1,6)*3_600_000L).also {journal.saveGroup(it)}
+                    journal.member(SurveyMember(group.id,id))
+                }
+                DoseChange(before, before.copy(state = state, markedAt = now, snoozedUntil = null))
+            }
         }
     }
     suspend fun correct(id: String, state: String): DoseChange? = mutex.withLock {
@@ -72,4 +82,32 @@ class Repository(val db: AppDatabase) {
             }
         }
     }
+    suspend fun importLegacy(context:android.content.Context) = mutex.withLock {
+        val prefs=context.getSharedPreferences("personal_book",android.content.Context.MODE_PRIVATE)
+        if(prefs.getBoolean("journal_imported_v2",false))return@withLock
+        db.withTransaction {
+            val mood=prefs.getString("mood","").orEmpty().trim()
+            val text=prefs.getString("note","").orEmpty()
+            if(mood.isNotEmpty()||text.isNotBlank()) {
+                // A stable ID makes retries safe even if the process dies before the preference commit.
+                if(db.wellbeing().entry("legacy-personal-book")==null)
+                    db.wellbeing().save(WellbeingEntry("legacy-personal-book",prefs.getLong("mood_at",0),mood.ifEmpty {null},text))
+            }
+        }
+        check(prefs.edit().putBoolean("journal_imported_v2",true).commit())
+    }
+    suspend fun saveWellbeing(entry: WellbeingEntry) = mutex.withLock {
+        require(!entry.mood.isNullOrBlank() || entry.text.isNotBlank())
+
+        db.withTransaction {
+            val journal = db.wellbeing()
+            journal.save(entry.copy(mood = entry.mood?.takeIf { it.isNotBlank() }))
+            entry.groupId?.let { id ->
+                val members = journal.members(id).filter { dao.occurrence(it)?.state == Occurrence.TAKEN }
+                journal.link(members.map { WellbeingLink(entry.id, it) })
+                journal.group(id)?.let { journal.saveGroup(it.copy(status = "answered")) }
+            }
+        }
+    }
+    suspend fun deleteWellbeing(id:String)=db.withTransaction { db.wellbeing().deleteLinks(id);db.wellbeing().delete(id) }
 }

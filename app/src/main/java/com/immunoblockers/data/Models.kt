@@ -70,5 +70,5 @@ interface AppDao {
     @Query("DELETE FROM occurrences WHERE medicationId = :id AND state = 'pending' AND scheduledAt > :now") suspend fun deleteFuture(id: String, now: Long)
     @Query("UPDATE occurrences SET state = :state, markedAt = :now, snoozedUntil = NULL WHERE id = :id AND state = 'pending'") suspend fun mark(id: String, state: String, now: Long): Int
 }
-@Database(entities = [Medication::class, Occurrence::class], version = 1, exportSchema = true)
-abstract class AppDatabase : RoomDatabase() { abstract fun dao(): AppDao }
+@Database(entities = [Medication::class, Occurrence::class, WellbeingEntry::class, WellbeingLink::class, SurveyGroup::class, SurveyMember::class], version = 2, exportSchema = true)
+abstract class AppDatabase : RoomDatabase() { abstract fun dao(): AppDao; abstract fun wellbeing(): WellbeingDao }

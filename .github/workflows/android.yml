@@ -6,13 +6,17 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish v0.3.0 preview release
+        description: Publish verified v0.4.0 release
         type: boolean
         default: false
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   build:
+    if: github.event_name != 'workflow_dispatch' || inputs.publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -37,22 +41,21 @@ jobs:
             echo "IMMUNOBLOCKERS_KEYSTORE=$RUNNER_TEMP/preview.jks" >> "$GITHUB_ENV"
             echo "IMMUNOBLOCKERS_STORE_PASSWORD=$SIGNING_PASSWORD" >> "$GITHUB_ENV"
           fi
-      - run: python -m unittest discover -s server
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease assembleDebugAndroidTest
       - name: Prepare universal APK
-        run: cp app/build/outputs/apk/release/app-release.apk Immunoblockers-0.3.0-universal.apk
+        run: |
+          if [ -n "$IMMUNOBLOCKERS_KEYSTORE" ]; then
+            cp app/build/outputs/apk/release/app-release.apk Immunoblockers-0.4.0-universal.apk
+            python tools/verify_release.py Immunoblockers-0.4.0-universal.apk
+          else
+            cp app/build/outputs/apk/release/app-release-unsigned.apk Immunoblockers-0.4.0-unsigned.apk
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: Immunoblockers-universal
-          path: Immunoblockers-0.3.0-universal.apk
-      - name: Publish preview
-        if: github.event_name == 'workflow_dispatch' && inputs.publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          test -n "$IMMUNOBLOCKERS_KEYSTORE"
-          gh release create v0.3.0 Immunoblockers-0.3.0-universal.apk --target "$GITHUB_SHA" --title 'Immunoblockers 0.3.0 — Android preview' --notes-file docs/RELEASE.md
+          path: Immunoblockers-0.4.0-*.apk*
   device-tests:
+    needs: build
     name: Android ${{ matrix.api }} device tests
     strategy:
       fail-fast: false
@@ -70,13 +73,15 @@ jobs:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Immunoblockers-universal
+          path: release-candidate
+      - name: Install video frame inspection tools
+        if: matrix.api == 35
+        run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
       - name: Enable KVM
         run: sudo chmod 666 /dev/kvm
-      - name: Start isolated HTTPS pairing relay
-        run: |
-          mkdir -p app/src/debug/res/raw
-          openssl req -x509 -newkey rsa:2048 -keyout "$RUNNER_TEMP/relay.key" -out app/src/debug/res/raw/test_ca.pem -days 1 -nodes -subj '/CN=Immunoblockers test relay' -addext 'subjectAltName=IP:10.0.2.2,DNS:localhost'
-          PAIR_DB="$RUNNER_TEMP/pairs.sqlite3" RELAY_TLS_CERT="$PWD/app/src/debug/res/raw/test_ca.pem" RELAY_TLS_KEY="$RUNNER_TEMP/relay.key" nohup python server/relay.py > "$RUNNER_TEMP/relay.log" 2>&1 &
       - name: Room, widgets, journal and Compose
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -90,7 +95,23 @@ jobs:
             if [ ${{ matrix.api }} -ge 31 ]; then adb shell appops set com.immunoblockers SCHEDULE_EXACT_ALARM allow; fi
             adb shell appwidget grantbind --package com.immunoblockers --user 0
             ./gradlew connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true || { cat app/build/outputs/androidTest-results/connected/debug/*.xml; adb logcat -d -s AndroidRuntime; adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots test-screenshots || true; exit 1; }
+            mkdir -p test-screenshots
+            adb shell am instrument -w -e class com.immunoblockers.ProcessPersistenceTest -e persistence_phase prepare com.immunoblockers.test/androidx.test.runner.AndroidJUnitRunner > test-screenshots/process-prepare.txt
+            python -c "from pathlib import Path; assert 'OK (1 test)' in Path('test-screenshots/process-prepare.txt').read_text()"
+            adb shell am force-stop com.immunoblockers
+            adb shell am instrument -w -e class com.immunoblockers.ProcessPersistenceTest -e persistence_phase verify com.immunoblockers.test/androidx.test.runner.AndroidJUnitRunner > test-screenshots/process-verify.txt
+            python -c "from pathlib import Path; assert 'OK (1 test)' in Path('test-screenshots/process-verify.txt').read_text()"
             adb pull /sdcard/Android/data/com.immunoblockers/files/screenshots test-screenshots
+            keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/smoke.p12" -alias smoke -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 2 -dname 'CN=CI only'
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$RUNNER_TEMP/smoke.p12" --ks-pass pass:android --key-pass pass:android --v4-signing-enabled false --out "$RUNNER_TEMP/release-smoke.apk" release-candidate/*.apk
+            adb uninstall com.immunoblockers
+            adb install "$RUNNER_TEMP/release-smoke.apk"
+            adb shell am force-stop com.immunoblockers
+            adb shell am start -W -n com.immunoblockers/.MainActivity > test-screenshots/release-launch.txt
+            python -c "from pathlib import Path; assert 'Status: ok' in Path('test-screenshots/release-launch.txt').read_text()"
+            adb shell pidof com.immunoblockers
+            python -c "import time; time.sleep(1)"
+            adb exec-out screencap -p > test-screenshots/release-home.png
             if [ ${{ matrix.api }} -eq 35 ]; then python tools/record_demo.py; fi
       - uses: actions/upload-artifact@v4
         if: always()
@@ -102,3 +123,46 @@ jobs:
         with:
           name: Android-screenshots-${{ matrix.api }}
           path: test-screenshots/
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    needs: [build, device-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Immunoblockers-universal
+          path: release
+      - name: Publish one verified universal APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test -f release/Immunoblockers-0.4.0-universal.apk.sha256
+          cd release
+          sha256sum --check Immunoblockers-0.4.0-universal.apk.sha256
+          gh release create v0.4.0 Immunoblockers-0.4.0-universal.apk Immunoblockers-0.4.0-universal.apk.sha256 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Immunoblockers 0.4.0' --notes-file ../docs/RELEASE.md --latest
+
+  stage-signed-draft:
+    if: github.event_name == 'workflow_dispatch' && !inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'build-tools;36.0.0'
+          log-accepted-android-sdk-licenses: false
+      - name: Verify and attach the locally signed APK to the existing draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python tools/verify_release.py distribution/Immunoblockers-0.4.0-universal.apk
+          test "$(gh release view v0.4.0 --json isDraft --jq '.isDraft')" = true
+          gh release upload v0.4.0 distribution/Immunoblockers-0.4.0-universal.apk distribution/Immunoblockers-0.4.0-universal.apk.sha256 --clobber
+          if [ -f docs/screenshots/0.4.0/validation-media.zip ]; then
+            gh release upload v0.4.0 docs/screenshots/0.4.0/validation-media.zip docs/screenshots/0.4.0/navigation.mp4 --clobber
+          fi
