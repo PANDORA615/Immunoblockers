@@ -104,10 +104,13 @@ class WidgetTest {
                 }
                 assertTrue(manager.bindAppWidgetIdIfAllowed(id,ComponentName(app,kind.provider),options))
                 val displayed=if(kind==WidgetKind.JOURNAL||kind==WidgetKind.PROGRESS||kind==WidgetKind.WEEK)listOf(row.copy(state=Occurrence.TAKEN,markedAt=System.currentTimeMillis()),row.copy(id="second",name="Следующий приём"),row.copy(id="third",name="Последняя отметка",state=Occurrence.SKIPPED,markedAt=System.currentTimeMillis()-1000)) else listOf(row,row.copy(id="second",name="Следующий приём"))
-                manager.updateAppWidget(id,WidgetUpdater.render(app,kind,displayed,ThemeSettings(widgetTheme=theme),height=height,width=width,latest=WellbeingEntry("last",1,"Хорошо","Заметка")))
+                val fixture=WidgetUpdater.render(app,kind,displayed,ThemeSettings(widgetTheme=theme),height=height,width=width,latest=WellbeingEntry("last",1,"Хорошо","Заметка"))
+                manager.updateAppWidget(id,fixture)
                 InstrumentationRegistry.getInstrumentation().runOnMainSync {
                     host.startListening()
                     val view=host.createView(app,id,manager.getAppWidgetInfo(id))
+                    // Provider refreshes are asynchronous; measure the exact fixture sent to this real host.
+                    view.updateAppWidget(fixture)
                     val scale=app.resources.displayMetrics.density
                     val w=(width*scale).toInt();val h=(height*scale).toInt()
                     view.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY))
