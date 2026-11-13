@@ -20,8 +20,12 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.immunoblockers.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.platform.testTag
 
-private data class BackdropSource(val image:ImageBitmap,val fallback:ImageBitmap)
+internal data class BackdropSource(val image:ImageBitmap,val fallback:ImageBitmap)
+private val LocalBackdropTint=staticCompositionLocalOf {Color.Transparent}
 private val LocalRootSize=staticCompositionLocalOf {IntSize.Zero}
 private val LocalBackdrop=staticCompositionLocalOf<BackdropSource?> {null}
 
@@ -29,11 +33,13 @@ private val LocalBackdrop=staticCompositionLocalOf<BackdropSource?> {null}
 @Composable private fun GlassLayer(modifier:Modifier=Modifier) {
     val source=LocalBackdrop.current ?: return
     val root=LocalRootSize.current
+    val tint=LocalBackdropTint.current
     var position by remember {mutableStateOf(androidx.compose.ui.geometry.Offset.Zero)}
     val system=android.os.Build.VERSION.SDK_INT>=31
     Canvas(modifier.onGloballyPositioned {position=it.positionInRoot()}.then(if(system)Modifier.blur(20.dp,BlurredEdgeTreatment.Unbounded) else Modifier)) {
         val image=if(system)source.image else source.fallback
         if(root.width>0&&root.height>0)drawImage(image,srcSize=IntSize(image.width,image.height),dstOffset=IntOffset(-position.x.toInt(),-position.y.toInt()),dstSize=root)
+        drawRect(tint)
     }
 }
 
@@ -54,7 +60,13 @@ private val LocalBackdrop=staticCompositionLocalOf<BackdropSource?> {null}
 
 @Composable fun GlassBackdrop(enabled:Boolean,content:@Composable ()->Unit) {
     val c=MaterialTheme.colorScheme
-    val source=remember(c.primary,c.surface) {
+    var rootSize by remember {mutableStateOf(IntSize.Zero)}
+    val path=LocalAppearance.current.wallpaperPath
+    val imageHeight=if(rootSize.width==0)800 else (360L*rootSize.height/rootSize.width).toInt().coerceIn(240,1440)
+    val photo by produceState<BackdropSource?>(null,path,imageHeight) {
+        value=withContext(Dispatchers.IO) {if(path.isBlank())null else runCatching {photoBackdrop(path,360,imageHeight)}.getOrNull()}
+    }
+    val gradient=remember(c.primary,c.surface) {
         fun bitmap(blur:Boolean):ImageBitmap {
             val bitmap=android.graphics.Bitmap.createBitmap(360,800,android.graphics.Bitmap.Config.ARGB_8888)
             val canvas=android.graphics.Canvas(bitmap);val paint=android.graphics.Paint(3)
@@ -69,14 +81,29 @@ private val LocalBackdrop=staticCompositionLocalOf<BackdropSource?> {null}
         }
         BackdropSource(bitmap(false),bitmap(true))
     }
-    var rootSize by remember {mutableStateOf(IntSize.Zero)}
-    CompositionLocalProvider(LocalBackdrop provides source,LocalRootSize provides rootSize) {
+    val source=photo?:gradient
+    val tint=if(photo==null)Color.Transparent else c.surface.copy(alpha=if(c.surface.luminance()<.5f).72f else .68f)
+    CompositionLocalProvider(LocalBackdrop provides source,LocalRootSize provides rootSize,LocalBackdropTint provides tint) {
         Box(Modifier.fillMaxSize().background(c.surface.copy(alpha=1f)).onSizeChanged {rootSize=it}) {
-            if(enabled)androidx.compose.foundation.Image(source.fallback,null,Modifier.matchParentSize(),contentScale=androidx.compose.ui.layout.ContentScale.FillBounds)
+            if(enabled||photo!=null) {
+                androidx.compose.foundation.Image(source.image,null,Modifier.matchParentSize().then(if(photo!=null)Modifier.testTag("appWallpaper")else Modifier),contentScale=androidx.compose.ui.layout.ContentScale.FillBounds)
+                Box(Modifier.matchParentSize().background(tint))
+            }
             content()
         }
     }
 }
+
+/** Keep scrolling cards inside their viewport and soften the boundary beneath the fixed header. */
+fun Modifier.scrollViewport(canScrollBack:Boolean,canScrollForward:Boolean):Modifier = this
+    .graphicsLayer {compositingStrategy=CompositingStrategy.Offscreen;clip=true}
+    .drawWithContent {
+        drawContent()
+        val edge=18.dp.toPx().coerceAtMost(size.height/3)
+        if(canScrollBack)drawRect(Brush.verticalGradient(listOf(Color.Transparent,Color.Black),0f,edge),size=androidx.compose.ui.geometry.Size(size.width,edge),blendMode=BlendMode.DstIn)
+        if(canScrollForward)drawRect(Brush.verticalGradient(listOf(Color.Black,Color.Transparent),size.height-edge,size.height),topLeft=androidx.compose.ui.geometry.Offset(0f,size.height-edge),size=androidx.compose.ui.geometry.Size(size.width,edge),blendMode=BlendMode.DstIn)
+    }
+
 
 @Composable fun LiquidNavigation(route:String,navigate:(String)->Unit) {
     val tabs=listOf(Triple("today",R.string.today,Icons.Outlined.Today),Triple("medications",R.string.medications,Icons.Outlined.Medication),Triple("history",R.string.history,Icons.Outlined.History),Triple("helpers",R.string.helpers_tab,Icons.Outlined.Widgets),Triple("settings",R.string.settings,Icons.Outlined.Tune))

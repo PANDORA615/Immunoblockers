@@ -78,6 +78,12 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
     val widgetPicker=rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()){uri->if(uri!=null)imageScope.launch {
         try {val path=copyLocalImage(context,uri);storeLocalImage(vm,path,false);vm.refresh();imageError=false}catch(_:Exception){imageError=true}
     }}
+    var wallpaperBusy by remember {mutableStateOf(false)}
+    var wallpaperError by remember {mutableStateOf(false)}
+    val wallpaperPicker=rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()){uri->if(uri!=null)imageScope.launch {
+        wallpaperBusy=true;wallpaperError=false
+        try {val path=copyLocalImage(context,uri);storeLocalImage(vm,path,LocalImageUse.WALLPAPER)}catch(_:Exception){wallpaperError=true}finally{wallpaperBusy=false}
+    }}
     val valid=hex.matches(Regex("#[0-9a-fA-F]{6}"))
     LazyColumn(modifier=Modifier.testTag("settingsList"),contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=32.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item {PageHeading(stringResource(R.string.settings));SectionTitle(R.string.appearance)}
@@ -91,6 +97,19 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
             item {FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {listOf(false,true).forEach {dark->PalettePreview(s.seed,dark)}}}
         }
         item {Text(stringResource(R.string.interface_style),style=MaterialTheme.typography.titleLarge);DesignChoices(s.interfaceStyle,listOf("glass" to R.string.glass_style,"material" to R.string.material_style)){value->vm.settings {it.copy(interfaceStyle=value)}};Text(stringResource(R.string.glass_hint),style=MaterialTheme.typography.bodySmall)}
+        item {
+            Text("Обои приложения",style=MaterialTheme.typography.titleLarge)
+            Text("Фон всех экранов и стеклянных карточек. Выбранное фото сохраняется на устройстве.",style=MaterialTheme.typography.bodySmall)
+            if(s.wallpaperPath.isNotBlank()) {
+                LocalImagePreview(s.wallpaperPath,"Предпросмотр обоев",Modifier.fillMaxWidth().height(144.dp).testTag("wallpaperPreview"))
+                Text("Обои выбраны",color=MaterialTheme.colorScheme.primary)
+            }
+            OutlinedButton(enabled=!wallpaperBusy,onClick={wallpaperPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}){Text(if(wallpaperBusy)"Сохраняем обои…" else "Выбрать обои")}
+            if(s.wallpaperPath.isNotBlank())TextButton(enabled=!wallpaperBusy,onClick={imageScope.launch {
+                try {storeLocalImage(vm,"",LocalImageUse.WALLPAPER);wallpaperError=false}catch(_:Exception){wallpaperError=true}
+            }}){Text("Удалить обои")}
+            if(wallpaperError)Text("Не удалось сохранить обои. Попробуйте другое изображение.",color=MaterialTheme.colorScheme.error)
+        }
         item {SettingSwitch(R.string.rounded_font,R.string.rounded_font_hint,s.roundedFont){value->vm.settings {it.copy(roundedFont=value)}}}
         item {HorizontalDivider();SectionTitle(R.string.control_design);Text(stringResource(R.string.control_design_hint),style=MaterialTheme.typography.bodyMedium)}
         item {Text(stringResource(R.string.field_design),style=MaterialTheme.typography.titleSmall);DesignChoices(s.fieldStyle,listOf("filled" to R.string.fields_filled,"outlined" to R.string.fields_outlined)){value->vm.settings {it.copy(fieldStyle=value)}}}
@@ -114,6 +133,7 @@ fun notificationSettings(context:android.content.Context) {context.startActivity
         }
         item {HorizontalDivider();SectionTitle(R.string.launcher_widgets)}
         item {
+            if(s.widgetImage.isNotBlank())LocalImagePreview(s.widgetImage,"Подложка виджетов",Modifier.fillMaxWidth().height(100.dp))
             Text("Оформление виджетов",style=MaterialTheme.typography.titleMedium)
             Text("Прозрачность: ${s.widgetOpacity*100/255}%")
             Slider(s.widgetOpacity.toFloat(),{value->vm.settings {it.copy(widgetOpacity=value.toInt())}},valueRange=40f..255f)

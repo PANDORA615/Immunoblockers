@@ -45,14 +45,14 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
     }
 }
 @Composable fun TodayScreen(rows: List<Occurrence>, meds: List<Medication>, vm: AppViewModel, add: () -> Unit, onRow:(Occurrence)->Unit, onTool:(String)->Unit = {}) {
-    val showHelpers=LocalAppearance.current.showHelpers
+    val listState=rememberLazyListState()
     val blocks=LocalAppearance.current.todayBlocks.split(',').toSet()
     val today = LocalDate.now()
     val doses = rows.filter {it.date==today.toString()}.sortedBy {it.time}
     val taken = doses.count {it.state==Occurrence.TAKEN}
     val skipped = doses.count {it.state==Occurrence.SKIPPED}
     val progress by animateFloatAsState(if(doses.isEmpty()) 0f else (taken+skipped).toFloat()/doses.size,tween(if(LocalReducedMotion.current) Motion.SHORT else Motion.PROGRESS),label="progress")
-    LazyColumn(modifier=Modifier.testTag("todayList"),contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=100.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    LazyColumn(state=listState,modifier=Modifier.fillMaxSize().scrollViewport(listState.canScrollBackward,listState.canScrollForward).testTag("todayList"),contentPadding=PaddingValues(start=20.dp,end=20.dp,bottom=100.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item { PageHeading(stringResource(R.string.today))
             Text(stringResource(R.string.today_label,today.format(DateTimeFormatter.ofPattern("d MMMM, EEEE",ru))),color=MaterialTheme.colorScheme.onSurfaceVariant) }
         item { PermissionStatus(vm, compact=true) }
@@ -68,7 +68,7 @@ fun displayInstant(time: Long) = Instant.ofEpochMilli(time).atZone(ZoneId.system
                 }
             }
         }
-        if(meds.none {!it.archived}) item { EmptyState(R.string.no_medications,R.string.no_medications_body) { Button(onClick=add){Text(stringResource(R.string.add_medication))} } }
+        if(meds.none {!it.archived}) item { EmptyState(R.string.no_medications,R.string.no_medications_body) }
         else if(doses.isEmpty()) item {EmptyState(R.string.no_doses,R.string.no_doses_body)}
         else if(taken+skipped==doses.size) item {EmptyState(R.string.all_done,R.string.all_done_body)}
         item {TodayHighlights(rows.filter {row->row.state!=Occurrence.PENDING||meds.any {it.id==row.medicationId&&!it.paused&&!it.archived}},blocks,onRow)}
