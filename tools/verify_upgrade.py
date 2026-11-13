@@ -26,7 +26,13 @@ def click(text=None, field=False):
 
 
 folder=Path('upgrade-evidence');folder.mkdir(exist_ok=True)
-adb('root');adb('wait-for-device')
+for attempt in range(5):
+    # adbd can close the first connection while switching to root immediately after boot.
+    subprocess.run(['adb','root'],check=False)
+    adb('wait-for-device')
+    if subprocess.check_output(['adb','shell','id','-u'],text=True).strip()=='0':break
+    time.sleep(1)
+else:raise RuntimeError('Disposable emulator did not provide root access')
 adb('install','distribution/Immunoblockers-0.4.0-universal.apk')
 adb('shell','am','start','-W','-n','com.immunoblockers/.MainActivity')
 time.sleep(2)

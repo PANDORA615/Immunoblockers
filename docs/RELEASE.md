@@ -8,3 +8,7 @@ Immunoblockers 0.4.1 — исправления главной страницы,
 Один универсальный APK, versionCode 5, Android 8.0+. Та же подпись, что у опубликованной 0.4.0: устанавливается поверх неё без удаления приложения. Не удаляйте приложение перед обновлением.
 
 Старые установки 0.3.0 используют утраченный прежний ключ и несовместимы с подписью ветки 0.4.x. OTA не может обойти проверку сертификата Android.
+
+Проверки: 19 unit-тестов, lint, на эмуляторах Android 8 и 15 — по 26 основных инструментальных сценариев, отдельная проверка перезапуска процесса, запуск R8-сборки и установка подписанного APK поверх опубликованной 0.4.0 с сохранением данных. [Отчёт](https://github.com/PANDORA615/Immunoblockers/blob/main/docs/VALIDATION.md).
+
+[Видео прокрутки](https://github.com/PANDORA615/Immunoblockers/releases/download/v0.4.1/scroll.mp4) · [Переключения вкладок](https://github.com/PANDORA615/Immunoblockers/releases/download/v0.4.1/navigation.mp4) · [Скриншоты и кадры](https://github.com/PANDORA615/Immunoblockers/releases/download/v0.4.1/validation-media.zip).
