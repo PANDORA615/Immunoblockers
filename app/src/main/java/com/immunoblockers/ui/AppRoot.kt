@@ -10,6 +10,8 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
@@ -59,6 +61,7 @@ fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit, r
     }
     val tabs = listOf(Triple("today", R.string.today, Icons.Outlined.Today), Triple("medications", R.string.medications, Icons.Outlined.Medication), Triple("history", R.string.history, Icons.Outlined.History), Triple("helpers", R.string.helpers_tab, Icons.Outlined.Widgets), Triple("settings", R.string.settings, Icons.Outlined.Tune))
     val main = tabs.any { it.first == route }
+    val tabState = rememberSaveableStateHolder()
     val duration = if(LocalReducedMotion.current) Motion.SHORT else Motion.SCREEN
     Scaffold(
         topBar={ if(main) CenterAlignedTopAppBar(colors=TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor=androidx.compose.ui.graphics.Color.Transparent),title={TextButton(onClick={nav.navigate("profile")}) {ProfileAvatar(settings.avatarPath);Spacer(Modifier.width(8.dp));Text(settings.nickname.ifBlank {"Мой профиль"}, style=MaterialTheme.typography.titleLarge)}}) },
@@ -66,14 +69,22 @@ fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit, r
         bottomBar={ if(main&&settings.interfaceStyle=="glass")LiquidNavigation(route){path->nav.navigate(path){popUpTo(nav.graph.startDestinationId){saveState=true};launchSingleTop=true;restoreState=true}} else if(main) NavigationBar { tabs.forEach { (path, title, icon) -> NavigationBarItem(selected=route==path, onClick={nav.navigate(path) { popUpTo(nav.graph.startDestinationId) { saveState=true }; launchSingleTop=true; restoreState=true }}, icon={Icon(icon, null)}, label={Text(stringResource(title))}) } } },
         floatingActionButton={ if(route == "today" || route == "medications") ExtendedFloatingActionButton(modifier=Modifier.testTag("addMedication"),onClick={nav.navigate("edit/new")}, icon={Icon(Icons.Outlined.Add,null)}, text={Text(stringResource(R.string.add_medication))}) }
     ) { padding ->
-        NavHost(nav, "today", modifier=Modifier.padding(padding), enterTransition={ EnterTransition.None }, exitTransition={ ExitTransition.None }) {
-            composable("today") { TodayScreen(rows, meds, vm, {nav.navigate("edit/new")}, {selected=it.id}, {nav.navigate("tools/$it")}) }
-            composable("medications") { MedicationsScreen(meds, {nav.navigate("detail/${it.id}")}) }
-            composable("history") { JournalScreen(rows, meds, vm, onRow={selected=it.id}) }
-            composable("helpers") { Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {HomeTools {nav.navigate("tools/$it")}} }
+        Box(Modifier.padding(padding).fillMaxSize()) {
+        // Keep the graph alive, but never draw an outgoing detail screen over a main tab.
+        val detailModifier = Modifier.fillMaxSize().layout { measurable, constraints ->
+            val placeable = measurable.measure(constraints)
+            layout(placeable.width, placeable.height) {
+                if (!main) placeable.placeRelative(0, 0)
+            }
+        }
+        NavHost(nav, "today", modifier=detailModifier, enterTransition={ EnterTransition.None }, exitTransition={ ExitTransition.None }) {
+            composable("today") {}
+            composable("medications") {}
+            composable("history") {}
+            composable("helpers") {}
             composable("profile") {ProfileScreen(vm){nav.popBackStack()}}
             composable("wellbeing/{group}") {back->Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp)) {TextButton(onClick={nav.popBackStack()}){Text("Назад")};WellbeingScreen(vm,back.arguments?.getString("group"))}}
-            composable("settings") { SettingsScreen(settings, vm) }
+            composable("settings") {}
             composable("tools/{kind}"){back->ToolScreen(back.arguments?.getString("kind")?:"stock",vm,{nav.popBackStack()}){date->nav.navigate("day/$date")}}
             composable("day/{date}"){back->Column {
                 TopAppBar(title={Text(stringResource(R.string.history))},navigationIcon={TextButton(onClick={nav.popBackStack()}){Text(stringResource(R.string.back))}})
@@ -84,6 +95,17 @@ fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit, r
                 if(id == "new" || meds.any { it.id==id }) MedicationEditor(meds.firstOrNull {it.id==id}, {nav.popBackStack()}, vm)
             }
             composable("detail/{id}") { back -> meds.firstOrNull {it.id==back.arguments?.getString("id")}?.let { med -> MedicationDetails(med, rows.filter {it.medicationId==med.id}, vm, {nav.popBackStack()}, {nav.navigate("edit/${med.id}")}, {selected=it.id}) } }
+        }
+        // One content tree per frame: transparent screens must not share AnimatedContent.
+        if (main) tabState.SaveableStateProvider(route) {
+            when (route) {
+                "today" -> TodayScreen(rows, meds, vm, {nav.navigate("edit/new")}, {selected=it.id}, {nav.navigate("tools/$it")})
+                "medications" -> MedicationsScreen(meds) {nav.navigate("detail/${it.id}")}
+                "history" -> JournalScreen(rows, meds, vm, onRow={selected=it.id})
+                "helpers" -> Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {HomeTools {nav.navigate("tools/$it")}}
+                "settings" -> SettingsScreen(settings, vm)
+            }
+        }
         }
     }
     rows.firstOrNull {it.id == selected}?.let { row -> DoseSheet(row, {selected=null}, vm) }
