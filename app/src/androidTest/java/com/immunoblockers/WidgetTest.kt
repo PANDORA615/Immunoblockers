@@ -71,10 +71,14 @@ class WidgetTest {
         val widgetId=host.allocateAppWidgetId()
         try {
             assertTrue("Test host needs: adb shell appwidget grantbind --package com.immunoblockers --user 0",manager.bindAppWidgetIdIfAllowed(widgetId,ComponentName(app,NextDoseWidget::class.java)))
-            manager.updateAppWidget(widgetId,WidgetUpdater.render(app,WidgetKind.NEXT,listOf(row),ThemeSettings(confirmWidgetActions=false)))
+            val fixture=WidgetUpdater.render(app,WidgetKind.NEXT,listOf(row),ThemeSettings(confirmWidgetActions=false))
+            manager.updateAppWidget(widgetId,fixture)
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
                 host.startListening()
                 val view=host.createView(app,widgetId,manager.getAppWidgetInfo(widgetId))
+                // An asynchronous provider refresh uses the user confirmation preference.
+                // Apply the exact no-confirmation fixture before exercising its real PendingIntent.
+                view.updateAppWidget(fixture)
                 assertTrue(text(view).contains(row.name))
                 view.findViewById<TextView>(R.id.widget_take).performClick()
                 view.findViewById<TextView>(R.id.widget_take).performClick()
