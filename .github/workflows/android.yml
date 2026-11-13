@@ -164,5 +164,40 @@ jobs:
           test "$(gh release view v0.4.1 --json isDraft --jq '.isDraft')" = true
           gh release upload v0.4.1 distribution/Immunoblockers-0.4.1-universal.apk distribution/Immunoblockers-0.4.1-universal.apk.sha256 --clobber
           if [ -f docs/screenshots/0.4.1/validation-media.zip ]; then
-            gh release upload v0.4.1 docs/screenshots/0.4.1/validation-media.zip docs/screenshots/0.4.1/navigation.mp4 --clobber
+            gh release upload v0.4.1 docs/screenshots/0.4.1/validation-media.zip docs/screenshots/0.4.1/navigation.mp4 docs/screenshots/0.4.1/scroll.mp4 --clobber
           fi
+
+  upgrade-tests:
+    if: github.event_name == 'workflow_dispatch' && !inputs.publish
+    needs: stage-signed-draft
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [26, 35]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - run: sudo chmod 666 /dev/kvm
+      - name: Upgrade actual signed release and retain data
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: python tools/verify_upgrade.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Upgrade-evidence-${{ matrix.api }}
+          path: |
+            upgrade-evidence/*.png
+            upgrade-evidence/result.txt

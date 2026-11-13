@@ -30,7 +30,7 @@ def main():
     args.apk.with_suffix('.apk.sha256').write_text(f'{checksum}  {args.apk.name}\n')
     print(f'Certificate, package and version verified. SHA256: {checksum}')
     if certs != [PREVIOUS_CERT]:
-        print('New signing key: cannot install over 0.3.0. Do not publish as a compatible OTA update.')
+        print('Same publisher as 0.4.0; incompatible with the older 0.3.0 certificate.')
 
 
 if __name__ == '__main__':
