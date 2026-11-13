@@ -65,6 +65,7 @@ fun AppRoot(vm: AppViewModel, requestedDose: String?, consumeDose: () -> Unit, r
     val duration = if(LocalReducedMotion.current) Motion.SHORT else Motion.SCREEN
     Scaffold(
         containerColor=androidx.compose.ui.graphics.Color.Transparent,
+        contentColor=MaterialTheme.colorScheme.onSurface,
         topBar={ if(main) CenterAlignedTopAppBar(colors=TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor=androidx.compose.ui.graphics.Color.Transparent),title={TextButton(onClick={nav.navigate("profile")}) {ProfileAvatar(settings.avatarPath);Spacer(Modifier.width(8.dp));Text(settings.nickname.ifBlank {"Мой профиль"}, style=MaterialTheme.typography.titleLarge)}}) },
         snackbarHost={ SnackbarHost(snack) },
         bottomBar={ if(main&&settings.interfaceStyle=="glass")LiquidNavigation(route){path->nav.navigate(path){popUpTo(nav.graph.startDestinationId){saveState=true};launchSingleTop=true;restoreState=true}} else if(main) NavigationBar { tabs.forEach { (path, title, icon) -> NavigationBarItem(selected=route==path, onClick={nav.navigate(path) { popUpTo(nav.graph.startDestinationId) { saveState=true }; launchSingleTop=true; restoreState=true }}, icon={Icon(icon, null)}, label={Text(stringResource(title))}) } } },

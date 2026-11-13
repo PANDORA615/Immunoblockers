@@ -37,7 +37,8 @@ class WallpaperTest {
    runBlocking {app.settings.update {it.copy(interfaceStyle="material")}}
    compose.onNodeWithText("Настройки").performClick()
    compose.onNodeWithTag("settingsList").performScrollToNode(hasText("Обои приложения"))
-   compose.onNodeWithTag("wallpaperPreview").assertExists()
+   compose.waitUntil(15000){compose.onAllNodesWithTag("wallpaperPreview").fetchSemanticsNodes().size==1}
+   compose.onNodeWithTag("wallpaperPreview").performScrollTo().assertExists()
    compose.onNodeWithTag("appWallpaper").assertExists()
    val instrumentation=InstrumentationRegistry.getInstrumentation()
    val automation=instrumentation.uiAutomation
