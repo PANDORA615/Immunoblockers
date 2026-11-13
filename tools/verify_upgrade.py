@@ -50,7 +50,10 @@ adb('shell','am','start','-W','-n','com.immunoblockers/.MainActivity')
 time.sleep(2)
 root=screen()
 assert any(n.get('text')=='UpgradeProfile' for n in root.iter('node')),'Profile disappeared after update'
-assert len([n for n in root.iter('node') if n.get('text')=='Добавить лекарство'])==1,'Duplicate add button'
+ET.ElementTree(root).write(folder/'updated-home.xml',encoding='utf-8')
+with (folder/'updated-home.png').open('wb') as output:adb('exec-out','screencap','-p',stdout=output)
+buttons=[n for n in root.iter('node') if 'Добавить лекарство' in (n.get('text','')+' '+n.get('content-desc',''))]
+assert len(buttons)==1,f'Expected one add button, found {len(buttons)}: '+ET.tostring(root,encoding='unicode')
 adb('shell','am','force-stop','com.immunoblockers')
 adb('pull',remote,str(folder/'after-databases'))
 with sqlite3.connect(folder/'after-databases/immunoblockers.db') as connection:

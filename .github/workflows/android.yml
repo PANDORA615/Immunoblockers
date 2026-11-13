@@ -200,4 +200,5 @@ jobs:
           name: Upgrade-evidence-${{ matrix.api }}
           path: |
             upgrade-evidence/*.png
+            upgrade-evidence/*.xml
             upgrade-evidence/result.txt
